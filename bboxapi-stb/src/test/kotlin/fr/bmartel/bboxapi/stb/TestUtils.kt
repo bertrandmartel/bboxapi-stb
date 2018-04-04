@@ -4,6 +4,7 @@ import com.github.kittinunf.fuel.core.*
 import com.github.kittinunf.result.Result
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import fr.bmartel.bboxapi.android.stb.TestCase
 import org.hamcrest.CoreMatchers
 import org.hamcrest.MatcherAssert
 import org.junit.Assert
