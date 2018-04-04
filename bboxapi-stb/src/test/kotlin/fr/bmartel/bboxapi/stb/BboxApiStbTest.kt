@@ -9,10 +9,7 @@ import fr.bmartel.bboxapi.android.stb.TestCase
 import fr.bmartel.bboxapi.stb.model.*
 import io.reactivex.schedulers.Schedulers
 import okhttp3.mockwebserver.MockWebServer
-import org.junit.Assert
-import org.junit.Before
-import org.junit.BeforeClass
-import org.junit.Test
+import org.junit.*
 import java.net.UnknownHostException
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -382,6 +379,7 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
+    @Ignore
     fun startDiscovery() {
         val rxBonjour = RxBonjour.Builder()
                 .platform(DesktopPlatform.create())
