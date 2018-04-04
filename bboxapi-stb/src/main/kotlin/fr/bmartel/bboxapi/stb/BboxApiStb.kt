@@ -137,7 +137,7 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
 
     private fun getTokenAndExecute(request: Request, handler: Handler<String>) {
         buildTokenRequest().responseString { req, res, result ->
-            result.fold({ d ->
+            result.fold({
                 token = res.headers["x-token"]?.get(0) ?: ""
                 tokenValidity = res.headers["x-token-validity"]?.get(0)?.toLong() ?: Date().time
                 //now call session id request
