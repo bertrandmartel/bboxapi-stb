@@ -398,7 +398,7 @@ open class BboxApiStbTest : TestCase() {
 
         var found = false
 
-        bboxApi.startDiscovery(findOneAndExit = true) { eventType, service, error ->
+        bboxApi.startDiscovery(findOneAndExit = true, maxDuration = 10000) { eventType, service, error ->
             Assert.assertNotNull(service)
             Assert.assertNull(error)
             Assert.assertEquals(eventType, StbServiceEvent.SERVICE_FOUND)
@@ -412,7 +412,7 @@ open class BboxApiStbTest : TestCase() {
         Assert.assertNotNull(bboxApi.serviceDiscovery)
         Assert.assertTrue(bboxApi.serviceDiscovery?.isDisposed ?: false)
 
-        //wait for 1 seconds for discovery stopped event
+        //wait for 2 seconds for discovery stopped event
         found = false
         lock = CountDownLatch(1)
         disposable.dispose()
