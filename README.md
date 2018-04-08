@@ -43,7 +43,7 @@
 ### Websocket
 
 - [x] open websocket stream for receiving notifications
-- [x] parse notification message : channel change, application state, error message
+- [x] parse notification messages : channel change, application state, error message
 
 ## Tests
 
@@ -54,9 +54,10 @@ Run test on mockserver :
 
 ## External Library
 
-* [Fuel](https://github.com/kittinunf/Fuel)
-* [Gson](https://github.com/google/gson)
-* [RxBonjour](https://github.com/mannodermaus/RxBonjour)
+* [Fuel](https://github.com/kittinunf/Fuel): Http client for REST API
+* [Gson](https://github.com/google/gson) : deserialize JSON objects
+* [RxBonjour](https://github.com/mannodermaus/RxBonjour) : MDNS discovery
+* [OkHttp](https://github.com/square/okhttp) : websocket client
 
 ## API documentation
 
