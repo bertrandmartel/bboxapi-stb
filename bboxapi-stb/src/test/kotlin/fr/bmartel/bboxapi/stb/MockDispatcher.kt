@@ -18,6 +18,11 @@ const val APP_TEST = "fr.bmartel.android.app"
 
 val CHANNELS = listOf("15224372559540.29059489526787863", "15224372559540.29059489526787864", "15224372559540.29059489526787865")
 
+const val CHANNEL_ID = "15224372559540.29059489526787863"
+
+var REGISTER_FAIL = false
+var SUBSCRIBE_FAIL = false
+
 class MockDispatcher : Dispatcher() {
 
     override fun dispatch(request: RecordedRequest): MockResponse {
@@ -36,7 +41,7 @@ class MockDispatcher : Dispatcher() {
             request.method == "GET" && request.path == "/api.bbox.lan/v0/userinterface/volume" -> sendResponse(request = request, fileName = "volume.json")
             request.method == "DELETE" && request.path.startsWith("/api.bbox.lan/v0/notification/") -> sendUnsubscribeResponse(request = request)
             request.method == "GET" && request.path == "/api.bbox.lan/v0/notification" -> sendResponse(request = request, fileName = "opened_channels.json")
-
+            request.method == "POST" && request.path == "/api.bbox.lan/v0/notification" -> sendSubscribeResponse(request = request)
             else -> MockResponse().setResponseCode(404)
         }
     }
@@ -98,6 +103,17 @@ class MockDispatcher : Dispatcher() {
         return MockResponse().setResponseCode(401)
     }
 
+    private fun sendSubscribeResponse(request: RecordedRequest): MockResponse {
+        val data = Gson().fromJson(request.body.readUtf8(), SubscribeRequest::class.java)
+        if (!SUBSCRIBE_FAIL && data.appId != "" && data.resources.isNotEmpty()) {
+            if (request.getHeader("x-sessionid") == SESSION_ID) {
+                return MockResponse().setResponseCode(200)
+            }
+            return MockResponse().setResponseCode(401)
+        }
+        return MockResponse().setResponseCode(400)
+    }
+
     private fun sendToast(request: RecordedRequest): MockResponse {
         if (request.getHeader("x-sessionid") == SESSION_ID &&
                 request.getHeader("Content-Type") == "application/json") {
@@ -121,11 +137,11 @@ class MockDispatcher : Dispatcher() {
     }
 
     private fun sendRegisterResp(request: RecordedRequest): MockResponse {
-        if (request.getHeader("x-sessionid") == SESSION_ID &&
+        if (!REGISTER_FAIL && request.getHeader("x-sessionid") == SESSION_ID &&
                 request.getHeader("Content-Type") == "application/json") {
             val register = Gson().fromJson(request.body.readUtf8(), RegisterRequest::class.java)
             if (register.appName != "") {
-                return MockResponse().setResponseCode(200)
+                return MockResponse().setResponseCode(200).setHeader("Location", "http://localhost:8080/run/$CHANNEL_ID")
             }
         }
         return MockResponse().setResponseCode(401)

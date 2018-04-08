@@ -27,7 +27,7 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
 
     var boxIp: String? = null
     var boxRestPort: Int? = null
-    val boxWebsocketPort: Int = 9090
+    var boxWebsocketPort: Int = 9090
 
     var tokenValidity: Long = Date().time
     var token: String = ""
@@ -47,6 +47,7 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
         fun onOpen()
         fun onClose()
         fun onMessage(text: String?)
+        fun onFailure(throwable: Throwable?)
     }
 
     private fun buildTokenRequest(): Request {
@@ -195,6 +196,10 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
             override fun onMessage(text: String?) {
                 listener.onMessage(text)
             }
+
+            override fun onFailure(throwable: Throwable?) {
+                listener.onFailure(throwable)
+            }
         })
         return NotificationChannel(channelId, registerRes)
     }
@@ -212,6 +217,10 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
 
             override fun onMessage(webSocket: WebSocket?, text: String?) {
                 listener.onMessage(text)
+            }
+
+            override fun onFailure(webSocket: WebSocket?, t: Throwable?, response: okhttp3.Response?) {
+                listener.onFailure(t)
             }
         })
     }

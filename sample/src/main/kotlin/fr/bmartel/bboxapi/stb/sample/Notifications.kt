@@ -15,12 +15,17 @@ fun main(args: Array<String>) {
         override fun onOpen() {
             println("websocket opened")
         }
+
         override fun onClose() {
             println("websocket closed")
         }
 
         override fun onMessage(text: String?) {
             println("message received : $text")
+        }
+
+        override fun onFailure(throwable: Throwable?) {
+            throwable?.printStackTrace()
         }
     }
 

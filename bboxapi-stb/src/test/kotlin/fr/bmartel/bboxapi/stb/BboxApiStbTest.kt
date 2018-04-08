@@ -2,6 +2,7 @@ package fr.bmartel.bboxapi.stb
 
 import com.github.kittinunf.fuel.core.FuelManager
 import com.github.kittinunf.fuel.core.HttpException
+import com.github.kittinunf.result.Result
 import de.mannodermaus.rxbonjour.BonjourBroadcastConfig
 import de.mannodermaus.rxbonjour.RxBonjour
 import de.mannodermaus.rxbonjour.drivers.jmdns.JmDNSDriver
@@ -10,7 +11,15 @@ import fr.bmartel.bboxapi.android.stb.TestCase
 import fr.bmartel.bboxapi.stb.model.*
 import io.reactivex.schedulers.Schedulers
 import okhttp3.mockwebserver.MockWebServer
-import org.junit.*
+import org.java_websocket.WebSocket
+import org.java_websocket.handshake.ClientHandshake
+import org.java_websocket.server.WebSocketServer
+import org.junit.Assert
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Test
+import java.lang.Exception
+import java.net.InetSocketAddress
 import java.net.UnknownHostException
 import java.util.*
 import java.util.concurrent.CountDownLatch
@@ -20,7 +29,6 @@ open class BboxApiStbTest : TestCase() {
     companion object {
         private val mockServer = MockWebServer()
         private val bboxApi = BboxApiStb(APP_ID, APP_SECRET, DesktopPlatform.create())
-
         @BeforeClass
         @JvmStatic
         fun initMockServer() {
@@ -35,12 +43,15 @@ open class BboxApiStbTest : TestCase() {
     fun setUp() {
         lock = CountDownLatch(1)
         bboxApi.cloudHost = mockServer.url("").toString().dropLast(n = 1)
+        bboxApi.boxIp = mockServer.hostName
         FuelManager.instance.basePath = "${mockServer.url("").toString().dropLast(n = 1)}/api.bbox.lan/v0"
         bboxApi.hasSessionId = false
         bboxApi.tokenValidity = Date().time
         bboxApi.token = ""
         bboxApi.sessionIdValidity = Date().time
         bboxApi.sessionId = ""
+        REGISTER_FAIL = false
+        SUBSCRIBE_FAIL = false
     }
 
     @Test
@@ -462,5 +473,150 @@ open class BboxApiStbTest : TestCase() {
         Assert.assertTrue(found)
         Assert.assertNotNull(bboxApi.serviceDiscovery)
         Assert.assertTrue(bboxApi.serviceDiscovery?.isDisposed ?: false)
+    }
+
+    @Test
+    fun subscribeNotification() {
+        var throwable: Throwable? = null
+
+        var clientOpened = false
+        var clientClosed = false
+        var clientMessageReceived: String? = null
+
+        var serverOpened = false
+        var serverClosed = false
+        var serverMessageReceived: String? = null
+        var serverError: Exception? = null
+
+        var serverStarted = false
+
+        val websocketServer = object : WebSocketServer(InetSocketAddress(0)) {
+            override fun onError(conn: WebSocket?, ex: Exception?) {
+                ex?.printStackTrace()
+                serverError = ex
+                lock.countDown()
+            }
+
+            override fun onStart() {
+                serverStarted = true
+                lock.countDown()
+            }
+
+            override fun onMessage(conn: WebSocket?, message: String?) {
+                serverMessageReceived = message
+                lock.countDown()
+            }
+
+            override fun onClose(conn: WebSocket?, code: Int, reason: String?, remote: Boolean) {
+                serverClosed = true
+            }
+
+            override fun onOpen(conn: WebSocket?, handshake: ClientHandshake?) {
+                serverOpened = true
+            }
+        }
+        websocketServer.start()
+        lock.await()
+        bboxApi.boxWebsocketPort = websocketServer.port
+        Assert.assertTrue(serverStarted)
+
+        lock = CountDownLatch(1)
+        val notificationChannel = bboxApi.subscribeNotification("appName",
+                listOf(Resource.Application, Resource.Media, Resource.Message),
+                object : BboxApiStb.WebSocketListener {
+                    override fun onOpen() {
+                        clientOpened = true
+                    }
+
+                    override fun onClose() {
+                        clientClosed = true
+                        lock.countDown()
+                    }
+
+                    override fun onMessage(text: String?) {
+                        clientMessageReceived = text
+                    }
+
+                    override fun onFailure(t: Throwable?) {
+                        t?.printStackTrace()
+                        throwable = t
+                        lock.countDown()
+                    }
+                })
+        Assert.assertNotNull(notificationChannel)
+        Assert.assertEquals(CHANNEL_ID, notificationChannel.channelId)
+        Assert.assertTrue(notificationChannel.subscribeResult.third is Result.Success)
+        lock.await()
+
+        //client
+        Assert.assertTrue(clientOpened)
+        Assert.assertFalse(clientClosed)
+        Assert.assertNull(clientMessageReceived)
+        Assert.assertNull(throwable)
+
+        //server
+        Assert.assertTrue(serverOpened)
+        Assert.assertFalse(serverClosed)
+        Assert.assertEquals(CHANNEL_ID, serverMessageReceived)
+        Assert.assertNull(serverError)
+
+        lock = CountDownLatch(1)
+        clientOpened = false
+        clientClosed = false
+        clientMessageReceived = null
+        serverMessageReceived = null
+        bboxApi.closeWebsocket()
+        lock.await()
+        Assert.assertNull(clientMessageReceived)
+        Assert.assertNull(serverMessageReceived)
+        Assert.assertNull(throwable)
+        Assert.assertTrue(clientClosed)
+        Assert.assertFalse(clientOpened)
+    }
+
+    @Test
+    fun subscribeNotificationRegisterFail() {
+        REGISTER_FAIL = true
+        val notificationChannel = bboxApi.subscribeNotification("appName",
+                listOf(Resource.Application, Resource.Media, Resource.Message),
+                object : BboxApiStb.WebSocketListener {
+                    override fun onOpen() {
+                    }
+
+                    override fun onClose() {
+                    }
+
+                    override fun onMessage(text: String?) {
+                    }
+
+                    override fun onFailure(t: Throwable?) {
+                    }
+                })
+        Assert.assertNotNull(notificationChannel)
+        Assert.assertNull(notificationChannel.channelId)
+        Assert.assertTrue(notificationChannel.subscribeResult.third is Result.Failure)
+    }
+
+    @Test
+    fun subscribeNotificationSubscribeFail() {
+        SUBSCRIBE_FAIL = true
+        val notificationChannel = bboxApi.subscribeNotification("appName",
+                listOf(Resource.Application, Resource.Media, Resource.Message),
+                object : BboxApiStb.WebSocketListener {
+                    override fun onOpen() {
+                    }
+
+                    override fun onClose() {
+                    }
+
+                    override fun onMessage(text: String?) {
+                    }
+
+                    override fun onFailure(t: Throwable?) {
+                    }
+                })
+        Assert.assertNotNull(notificationChannel)
+        Assert.assertNull(notificationChannel.channelId)
+        Assert.assertTrue(notificationChannel.subscribeResult.third is Result.Failure)
     }
 }
