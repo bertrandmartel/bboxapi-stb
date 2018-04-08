@@ -7,6 +7,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.RecordedRequest
 import okio.Buffer
 import java.util.*
+import java.util.regex.Pattern
 
 const val TOKEN = "123456789"
 const val SESSION_ID = "1234567890123456789"
@@ -14,6 +15,8 @@ const val APP_ID = "100-100"
 const val APP_SECRET = "1234567890123456789"
 
 const val APP_TEST = "fr.bmartel.android.app"
+
+val CHANNELS = listOf("15224372559540.29059489526787863", "15224372559540.29059489526787864", "15224372559540.29059489526787865")
 
 class MockDispatcher : Dispatcher() {
 
@@ -31,6 +34,9 @@ class MockDispatcher : Dispatcher() {
             request.method == "GET" && request.path == "/api.bbox.lan/v0/applications/$APP_TEST/image" -> sendResponse(request = request, fileName = "ic_launcher.png", text = false)
             request.method == "GET" && request.path == "/api.bbox.lan/v0/media" -> sendResponse(request = request, fileName = "current_channel.json")
             request.method == "GET" && request.path == "/api.bbox.lan/v0/userinterface/volume" -> sendResponse(request = request, fileName = "volume.json")
+            request.method == "DELETE" && request.path.startsWith("/api.bbox.lan/v0/notification/") -> sendUnsubscribeResponse(request = request)
+            request.method == "GET" && request.path == "/api.bbox.lan/v0/notification" -> sendResponse(request = request, fileName = "opened_channels.json")
+
             else -> MockResponse().setResponseCode(404)
         }
     }
@@ -72,6 +78,20 @@ class MockDispatcher : Dispatcher() {
     }
 
     private fun sendOk(request: RecordedRequest): MockResponse {
+        if (request.getHeader("x-sessionid") == SESSION_ID) {
+            return MockResponse().setResponseCode(200)
+        }
+        return MockResponse().setResponseCode(401)
+    }
+
+    private fun sendUnsubscribeResponse(request: RecordedRequest): MockResponse {
+        val pattern = Pattern.compile("/api.bbox.lan/v0/notification/(.*)")
+        val matcher = pattern.matcher(request.path)
+        if (matcher.find()) {
+            if (!CHANNELS.contains(matcher.group(1))) {
+                return MockResponse().setResponseCode(401)
+            }
+        }
         if (request.getHeader("x-sessionid") == SESSION_ID) {
             return MockResponse().setResponseCode(200)
         }

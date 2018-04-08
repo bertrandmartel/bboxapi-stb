@@ -1,5 +1,6 @@
 package fr.bmartel.bboxapi.stb
 
+import com.github.kittinunf.fuel.core.FuelManager
 import com.github.kittinunf.fuel.core.HttpException
 import de.mannodermaus.rxbonjour.BonjourBroadcastConfig
 import de.mannodermaus.rxbonjour.RxBonjour
@@ -26,7 +27,7 @@ open class BboxApiStbTest : TestCase() {
             mockServer.start()
             mockServer.setDispatcher(MockDispatcher())
             bboxApi.cloudHost = mockServer.url("").toString().dropLast(n = 1)
-            bboxApi.setBoxHost(host = mockServer.url("").toString().dropLast(n = 1))
+            FuelManager.instance.basePath = "${mockServer.url("").toString().dropLast(n = 1)}/api.bbox.lan/v0"
         }
     }
 
@@ -34,7 +35,7 @@ open class BboxApiStbTest : TestCase() {
     fun setUp() {
         lock = CountDownLatch(1)
         bboxApi.cloudHost = mockServer.url("").toString().dropLast(n = 1)
-        bboxApi.setBoxHost(host = mockServer.url("").toString().dropLast(n = 1))
+        FuelManager.instance.basePath = "${mockServer.url("").toString().dropLast(n = 1)}/api.bbox.lan/v0"
         bboxApi.hasSessionId = false
         bboxApi.tokenValidity = Date().time
         bboxApi.token = ""
@@ -211,6 +212,41 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
+    fun unsubscribe() {
+        TestUtils.executeAsyncOneParam(input = CHANNELS[0], testcase = this, filename = null, body = bboxApi::unsubscribe)
+    }
+
+    @Test
+    fun unsubscribeCb() {
+        TestUtils.executeAsyncOneParamCb(input = CHANNELS[0], testcase = this, filename = null, body = bboxApi::unsubscribe)
+    }
+
+    @Test
+    fun unsubscribeSync() {
+        TestUtils.executeSyncOneParam(input = CHANNELS[0], filename = null, body = bboxApi::unsubscribeSync)
+    }
+
+    @Test
+    fun getOpenedChannels() {
+        TestUtils.executeAsync(testcase = this, filename = "opened_channels.json", body = bboxApi::getOpenedChannels)
+    }
+
+    @Test
+    fun getOpenedChannelsCb() {
+        TestUtils.executeAsyncCb(testcase = this, filename = "opened_channels.json", body = bboxApi::getOpenedChannels)
+    }
+
+    @Test
+    fun getOpenedChannelsSync() {
+        TestUtils.executeSync(filename = "opened_channels.json", body = bboxApi::getOpenedChannelsSync)
+    }
+
+    @Test
+    fun unsubscribeAllSync() {
+        TestUtils.executeSync(filename = "opened_channels.json", body = bboxApi::unsubscribeAllSync)
+    }
+
+    @Test
     fun noHostGetToken() {
         bboxApi.cloudHost = "http://testsetsetset"
         TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels, expectedException = UnknownHostException())
@@ -236,25 +272,25 @@ open class BboxApiStbTest : TestCase() {
 
     @Test
     fun noHostGetSessionId() {
-        bboxApi.setBoxHost("http://testsetsetset")
+        FuelManager.instance.basePath = "http://testsetsetset/api.bbox.lan/v0"
         TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels, expectedException = UnknownHostException())
     }
 
     @Test
     fun noHostGetSessionIdSync() {
-        bboxApi.setBoxHost("http://testsetsetset")
+        FuelManager.instance.basePath = "http://testsetsetset/api.bbox.lan/v0"
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync, expectedException = UnknownHostException())
     }
 
     @Test
     fun notFoundGetSessionId() {
-        bboxApi.setBoxHost(mockServer.url("").toString().dropLast(n = 1) + "/test")
+        FuelManager.instance.basePath = "${mockServer.url("").toString().dropLast(n = 1)}/test/api.bbox.lan/v0"
         TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels, expectedException = HttpException(httpCode = 404, httpMessage = "Client Error"))
     }
 
     @Test
     fun notFoundGetSessionIdSync() {
-        bboxApi.setBoxHost(mockServer.url("").toString().dropLast(n = 1) + "/test")
+        FuelManager.instance.basePath = "${mockServer.url("").toString().dropLast(n = 1)}/test/api.bbox.lan/v0"
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync, expectedException = HttpException(httpCode = 404, httpMessage = "Client Error"))
     }
 
@@ -379,7 +415,6 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    @Ignore
     fun startDiscovery() {
         val rxBonjour = RxBonjour.Builder()
                 .platform(DesktopPlatform.create())
@@ -387,8 +422,8 @@ open class BboxApiStbTest : TestCase() {
                 .create()
 
         val broadcastConfig = BonjourBroadcastConfig(
-                type = BBOXAPI_SERVICE_TYPE,
-                name = BBOXAPI_SERVICE_NAME,
+                type = BBOXAPI_REST_SERVICE_TYPE,
+                name = BBOXAPI_REST_SERVICE_NAME,
                 address = null,
                 port = 13337)
 
@@ -398,7 +433,7 @@ open class BboxApiStbTest : TestCase() {
 
         var found = false
 
-        bboxApi.startDiscovery(findOneAndExit = true, maxDuration = 10000) { eventType, service, error ->
+        bboxApi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000) { eventType, service, error ->
             Assert.assertNotNull(service)
             Assert.assertNull(error)
             Assert.assertEquals(eventType, StbServiceEvent.SERVICE_FOUND)
@@ -416,7 +451,7 @@ open class BboxApiStbTest : TestCase() {
         found = false
         lock = CountDownLatch(1)
         disposable.dispose()
-        bboxApi.startDiscovery(findOneAndExit = true, maxDuration = 2000) { eventType, service, error ->
+        bboxApi.startRestDiscovery(findOneAndExit = true, maxDuration = 2000) { eventType, service, error ->
             Assert.assertNull(service)
             Assert.assertNull(error)
             Assert.assertEquals(eventType, StbServiceEvent.DISCOVERY_STOPPED)

@@ -25,11 +25,11 @@ targetCompatibility = JavaVersion.VERSION_1_6
 
 dependencies {
     implementation "de.mannodermaus.rxjava2:rxbonjour:2.0.0-RC1"
-
     implementation "de.mannodermaus.rxjava2:rxbonjour-platform-desktop:2.0.0-RC1"
     implementation "de.mannodermaus.rxjava2:rxbonjour-driver-jmdns:2.0.0-RC1"
-
     implementation "com.github.kittinunf.fuel:fuel-gson:$fuelGsonVersion"
+    implementation "com.squareup.okhttp3:okhttp:3.5.0"
+
     testCompile "junit:junit:$junitVersion"
     testCompile "com.squareup.okhttp3:mockwebserver:$mockWebserverVersion"
     testCompile "org.skyscreamer:jsonassert:$jsonAssertVersion"
