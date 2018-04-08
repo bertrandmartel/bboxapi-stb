@@ -4,6 +4,7 @@ import com.github.kittinunf.result.Result
 import de.mannodermaus.rxbonjour.platforms.desktop.DesktopPlatform
 import fr.bmartel.bboxapi.stb.BboxApiStb
 import fr.bmartel.bboxapi.stb.model.StbServiceEvent
+import fr.bmartel.bboxapi.stb.model.ToastRequest
 
 fun main(args: Array<String>) {
     val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret", platform = DesktopPlatform.create())
@@ -11,27 +12,16 @@ fun main(args: Array<String>) {
     bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000) { eventType, service, error ->
         when (eventType) {
             StbServiceEvent.SERVICE_FOUND -> {
-                bboxapi.getChannels { _, _, result ->
+                bboxapi.setVolume(volume = 10) { request, response, result ->
                     when (result) {
                         is Result.Failure -> {
                             val ex = result.getException()
                             ex.printStackTrace()
+                            println(request)
+                            println(response)
                         }
                         is Result.Success -> {
-                            val data = result.get()
-                            println(data)
-                        }
-                    }
-                }
-                bboxapi.getApps { _, _, result ->
-                    when (result) {
-                        is Result.Failure -> {
-                            val ex = result.getException()
-                            ex.printStackTrace()
-                        }
-                        is Result.Success -> {
-                            val data = result.get()
-                            println(data)
+                            println(response.statusCode)
                         }
                     }
                 }

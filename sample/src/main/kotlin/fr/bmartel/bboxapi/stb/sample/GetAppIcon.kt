@@ -11,27 +11,17 @@ fun main(args: Array<String>) {
     bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000) { eventType, service, error ->
         when (eventType) {
             StbServiceEvent.SERVICE_FOUND -> {
-                bboxapi.getChannels { _, _, result ->
+                bboxapi.getAppIcon(packageName = "com.google.android.youtube.tv") { request, response, result ->
                     when (result) {
                         is Result.Failure -> {
                             val ex = result.getException()
                             ex.printStackTrace()
+                            println(request)
+                            println(response)
                         }
                         is Result.Success -> {
                             val data = result.get()
-                            println(data)
-                        }
-                    }
-                }
-                bboxapi.getApps { _, _, result ->
-                    when (result) {
-                        is Result.Failure -> {
-                            val ex = result.getException()
-                            ex.printStackTrace()
-                        }
-                        is Result.Success -> {
-                            val data = result.get()
-                            println(data)
+                            println(data.size)
                         }
                     }
                 }
