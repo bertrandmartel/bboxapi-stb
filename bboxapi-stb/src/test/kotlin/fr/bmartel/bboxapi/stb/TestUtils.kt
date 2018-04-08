@@ -3,6 +3,7 @@ package fr.bmartel.bboxapi.stb
 import com.github.kittinunf.fuel.core.*
 import com.github.kittinunf.result.Result
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
 import fr.bmartel.bboxapi.android.stb.TestCase
 import org.hamcrest.CoreMatchers
@@ -11,6 +12,7 @@ import org.junit.Assert
 import org.skyscreamer.jsonassert.JSONAssert
 import java.io.File
 import java.net.UnknownHostException
+import java.util.concurrent.CountDownLatch
 
 class TestUtils {
 
@@ -213,6 +215,17 @@ class TestUtils {
                 Assert.assertTrue(fuelError?.exception is JsonSyntaxException)
             } else {
                 Assert.fail("unchecked exception : $fuelError")
+            }
+        }
+
+        fun <T> sendNotificationAndWait(filename: String, response: T, error: Boolean = false) {
+            Assert.assertNotNull(response)
+            val data = JsonParser().parse(TestUtils.getResTextFile(fileName = filename)).asJsonObject
+            if (error) {
+                JSONAssert.assertEquals(data.toString(), Gson().toJson(response), false)
+
+            } else {
+                JSONAssert.assertEquals(data.getAsJsonObject("body").toString(), Gson().toJson(response), false)
             }
         }
     }

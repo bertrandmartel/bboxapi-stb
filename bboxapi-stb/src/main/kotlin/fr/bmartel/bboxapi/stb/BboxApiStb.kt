@@ -5,7 +5,10 @@ import com.github.kittinunf.fuel.core.*
 import com.github.kittinunf.fuel.gson.gsonDeserializerOf
 import com.github.kittinunf.result.Result
 import com.github.kittinunf.result.flatMapError
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonParser
+import com.google.gson.JsonSyntaxException
 import de.mannodermaus.rxbonjour.Platform
 import de.mannodermaus.rxbonjour.RxBonjour
 import de.mannodermaus.rxbonjour.drivers.jmdns.JmDNSDriver
@@ -15,6 +18,7 @@ import okhttp3.OkHttpClient
 import okhttp3.WebSocket
 import java.util.*
 import kotlin.concurrent.schedule
+
 
 const val BBOXAPI_REST_SERVICE_TYPE = "_http._tcp"
 const val BBOXAPI_REST_SERVICE_NAME = "Bboxapi"
@@ -46,7 +50,9 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
     interface WebSocketListener {
         fun onOpen()
         fun onClose()
-        fun onMessage(text: String?)
+        fun onError(error: BboxApiError)
+        fun onMedia(media: MediaEvent)
+        fun onApp(app: AppEvent)
         fun onFailure(throwable: Throwable?)
     }
 
@@ -183,31 +189,9 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
         if (subscribeRes.third is Result.Failure) {
             return NotificationChannel(null, subscribeRes)
         }
-        openWebsocket(object : WebSocketListener {
-            override fun onOpen() {
-                websocket?.send(channelId)
-                listener.onOpen()
-            }
-
-            override fun onClose() {
-                listener.onClose()
-            }
-
-            override fun onMessage(text: String?) {
-                listener.onMessage(text)
-            }
-
-            override fun onFailure(throwable: Throwable?) {
-                listener.onFailure(throwable)
-            }
-        })
-        return NotificationChannel(channelId, registerRes)
-    }
-
-    fun openWebsocket(listener: WebSocketListener) {
-        httpClient = OkHttpClient()
-        websocket = httpClient.newWebSocket(okhttp3.Request.Builder().url("ws://$boxIp:$boxWebsocketPort").build(), object : okhttp3.WebSocketListener() {
+        openWebsocket(object : okhttp3.WebSocketListener() {
             override fun onOpen(webSocket: WebSocket?, response: okhttp3.Response?) {
+                webSocket?.send(channelId)
                 listener.onOpen()
             }
 
@@ -216,13 +200,36 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
             }
 
             override fun onMessage(webSocket: WebSocket?, text: String?) {
-                listener.onMessage(text)
+                if (text != null) {
+                    try {
+                        val data = JsonParser().parse(text).asJsonObject
+                        when {
+                            data.has("error") -> listener.onError(Gson().fromJson(text, BboxApiError::class.java))
+                            data.has("resourceId") -> {
+                                when {
+                                    data.get("resourceId").asString == "Media" -> listener.onMedia(Gson().fromJson(data.getAsJsonObject("body"), MediaEvent::class.java))
+                                    data.get("resourceId").asString == "Application" -> listener.onApp(Gson().fromJson(data.getAsJsonObject("body"), AppEvent::class.java))
+                                    else -> listener.onError(BboxApiError("can't parse event : $text"))
+                                }
+                            }
+                            else -> listener.onError(BboxApiError("can't parse event : $text"))
+                        }
+                    } catch (e: JsonSyntaxException) {
+                        listener.onError(BboxApiError("can't parse event : $text"))
+                    }
+                }
             }
 
             override fun onFailure(webSocket: WebSocket?, t: Throwable?, response: okhttp3.Response?) {
                 listener.onFailure(t)
             }
         })
+        return NotificationChannel(channelId, registerRes)
+    }
+
+    fun openWebsocket(listener: okhttp3.WebSocketListener) {
+        httpClient = OkHttpClient()
+        websocket = httpClient.newWebSocket(okhttp3.Request.Builder().url("ws://$boxIp:$boxWebsocketPort").build(), listener)
     }
 
     fun closeWebsocket() {
@@ -584,11 +591,4 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
         return processSessionIdSync(request = buildPostNotification(channelId, appId, message), json = false)
     }
     */
-
-    /*
-    {"error":"Subscribe first to resource or invalid appId XXX-XXX"}
-    {"resourceId":"Application","body":{"packageName":"fr.m6.m6replay.by","state":"background"}}
-    {"resourceId":"Media","body":{"mediaService":"Live","mediaState":"play","mediaTitle":"TF1","positionId":1}}
-    {"resourceId":"Message","body":{"appId":"XXXXX","message":"some message"}}
-     */
 }

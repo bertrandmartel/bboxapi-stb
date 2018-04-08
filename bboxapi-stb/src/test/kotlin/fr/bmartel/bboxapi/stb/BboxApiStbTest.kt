@@ -3,6 +3,8 @@ package fr.bmartel.bboxapi.stb
 import com.github.kittinunf.fuel.core.FuelManager
 import com.github.kittinunf.fuel.core.HttpException
 import com.github.kittinunf.result.Result
+import com.google.gson.Gson
+import com.google.gson.JsonParser
 import de.mannodermaus.rxbonjour.BonjourBroadcastConfig
 import de.mannodermaus.rxbonjour.RxBonjour
 import de.mannodermaus.rxbonjour.drivers.jmdns.JmDNSDriver
@@ -18,6 +20,7 @@ import org.junit.Assert
 import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
+import org.skyscreamer.jsonassert.JSONAssert
 import java.lang.Exception
 import java.net.InetSocketAddress
 import java.net.UnknownHostException
@@ -481,7 +484,9 @@ open class BboxApiStbTest : TestCase() {
 
         var clientOpened = false
         var clientClosed = false
-        var clientMessageReceived: String? = null
+        var mediaMessageReceived: MediaEvent? = null
+        var appMessageReceived: AppEvent? = null
+        var errorMessageReceived: BboxApiError? = null
 
         var serverOpened = false
         var serverClosed = false
@@ -489,6 +494,7 @@ open class BboxApiStbTest : TestCase() {
         var serverError: Exception? = null
 
         var serverStarted = false
+        var connection: WebSocket? = null
 
         val websocketServer = object : WebSocketServer(InetSocketAddress(0)) {
             override fun onError(conn: WebSocket?, ex: Exception?) {
@@ -504,6 +510,7 @@ open class BboxApiStbTest : TestCase() {
 
             override fun onMessage(conn: WebSocket?, message: String?) {
                 serverMessageReceived = message
+                connection = conn
                 lock.countDown()
             }
 
@@ -524,6 +531,7 @@ open class BboxApiStbTest : TestCase() {
         val notificationChannel = bboxApi.subscribeNotification("appName",
                 listOf(Resource.Application, Resource.Media, Resource.Message),
                 object : BboxApiStb.WebSocketListener {
+
                     override fun onOpen() {
                         clientOpened = true
                     }
@@ -533,25 +541,40 @@ open class BboxApiStbTest : TestCase() {
                         lock.countDown()
                     }
 
-                    override fun onMessage(text: String?) {
-                        clientMessageReceived = text
-                    }
-
                     override fun onFailure(t: Throwable?) {
                         t?.printStackTrace()
                         throwable = t
+                        lock.countDown()
+                    }
+
+                    override fun onApp(app: AppEvent) {
+                        appMessageReceived = app
+                        lock.countDown()
+                    }
+
+                    override fun onMedia(media: MediaEvent) {
+                        mediaMessageReceived = media
+                        lock.countDown()
+                    }
+
+                    override fun onError(error: BboxApiError) {
+                        errorMessageReceived = error
                         lock.countDown()
                     }
                 })
         Assert.assertNotNull(notificationChannel)
         Assert.assertEquals(CHANNEL_ID, notificationChannel.channelId)
         Assert.assertTrue(notificationChannel.subscribeResult.third is Result.Success)
+
+        //wait for server to receive channel ID
         lock.await()
 
         //client
         Assert.assertTrue(clientOpened)
         Assert.assertFalse(clientClosed)
-        Assert.assertNull(clientMessageReceived)
+        Assert.assertNull(mediaMessageReceived)
+        Assert.assertNull(appMessageReceived)
+        Assert.assertNull(errorMessageReceived)
         Assert.assertNull(throwable)
 
         //server
@@ -560,14 +583,56 @@ open class BboxApiStbTest : TestCase() {
         Assert.assertEquals(CHANNEL_ID, serverMessageReceived)
         Assert.assertNull(serverError)
 
-        lock = CountDownLatch(1)
+        Assert.assertNotNull(connection)
+        Assert.assertNotNull(bboxApi.websocket)
+
         clientOpened = false
         clientClosed = false
-        clientMessageReceived = null
         serverMessageReceived = null
-        bboxApi.closeWebsocket()
+
+        //send Media notification
+        lock = CountDownLatch(1)
+        connection?.send(TestUtils.getResTextFile("websocket_media.json"))
         lock.await()
-        Assert.assertNull(clientMessageReceived)
+        TestUtils.sendNotificationAndWait(filename = "websocket_media.json", response = mediaMessageReceived)
+
+        //send App notification
+        lock = CountDownLatch(1)
+        connection?.send(TestUtils.getResTextFile("websocket_application.json"))
+        lock.await()
+        TestUtils.sendNotificationAndWait(filename = "websocket_application.json", response = appMessageReceived)
+
+        //send Error notification
+        lock = CountDownLatch(1)
+        connection?.send(TestUtils.getResTextFile("websocket_error_appname.json"))
+        lock.await()
+        TestUtils.sendNotificationAndWait(filename = "websocket_error_appname.json", response = errorMessageReceived, error = true)
+
+        //unknown notification format (not JSON)
+        lock = CountDownLatch(1)
+        connection?.send("{something unexpected}")
+        lock.await()
+        Assert.assertNotNull(errorMessageReceived)
+        JSONAssert.assertEquals(Gson().toJson(BboxApiError("can't parse event : {something unexpected}")), Gson().toJson(errorMessageReceived), false)
+
+        //unknown notification format (JSON)
+        lock = CountDownLatch(1)
+        connection?.send("{\"some\":\"thing\"}")
+        lock.await()
+        Assert.assertNotNull(errorMessageReceived)
+        JSONAssert.assertEquals(Gson().toJson(BboxApiError("can't parse event : {\"some\":\"thing\"}")), Gson().toJson(errorMessageReceived), false)
+
+        //unknown resourceId)
+        lock = CountDownLatch(1)
+        connection?.send("{\"resourceId\":\"something\"}")
+        lock.await()
+        Assert.assertNotNull(errorMessageReceived)
+        JSONAssert.assertEquals(Gson().toJson(BboxApiError("can't parse event : {\"resourceId\":\"something\"}")), Gson().toJson(errorMessageReceived), false)
+
+        lock = CountDownLatch(1)
+        bboxApi.closeWebsocket()
+        //wait for closing
+        lock.await()
         Assert.assertNull(serverMessageReceived)
         Assert.assertNull(throwable)
         Assert.assertTrue(clientClosed)
@@ -580,13 +645,19 @@ open class BboxApiStbTest : TestCase() {
         val notificationChannel = bboxApi.subscribeNotification("appName",
                 listOf(Resource.Application, Resource.Media, Resource.Message),
                 object : BboxApiStb.WebSocketListener {
+                    override fun onApp(app: AppEvent) {
+                    }
+
+                    override fun onMedia(media: MediaEvent) {
+                    }
+
+                    override fun onError(error: BboxApiError) {
+                    }
+
                     override fun onOpen() {
                     }
 
                     override fun onClose() {
-                    }
-
-                    override fun onMessage(text: String?) {
                     }
 
                     override fun onFailure(t: Throwable?) {
@@ -603,13 +674,19 @@ open class BboxApiStbTest : TestCase() {
         val notificationChannel = bboxApi.subscribeNotification("appName",
                 listOf(Resource.Application, Resource.Media, Resource.Message),
                 object : BboxApiStb.WebSocketListener {
+                    override fun onApp(app: AppEvent) {
+                    }
+
+                    override fun onMedia(media: MediaEvent) {
+                    }
+
+                    override fun onError(error: BboxApiError) {
+                    }
+
                     override fun onOpen() {
                     }
 
                     override fun onClose() {
-                    }
-
-                    override fun onMessage(text: String?) {
                     }
 
                     override fun onFailure(t: Throwable?) {

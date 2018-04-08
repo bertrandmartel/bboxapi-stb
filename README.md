@@ -43,7 +43,7 @@
 ### Websocket
 
 - [x] open websocket stream for receiving notifications
-- [ ] parse notification message in protobuf protocol
+- [x] parse notification message : channel change, application state, error message
 
 ## Tests
 

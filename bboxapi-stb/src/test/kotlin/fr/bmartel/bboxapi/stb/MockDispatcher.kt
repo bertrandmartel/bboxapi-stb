@@ -42,7 +42,9 @@ class MockDispatcher : Dispatcher() {
             request.method == "DELETE" && request.path.startsWith("/api.bbox.lan/v0/notification/") -> sendUnsubscribeResponse(request = request)
             request.method == "GET" && request.path == "/api.bbox.lan/v0/notification" -> sendResponse(request = request, fileName = "opened_channels.json")
             request.method == "POST" && request.path == "/api.bbox.lan/v0/notification" -> sendSubscribeResponse(request = request)
-            else -> MockResponse().setResponseCode(404)
+            else -> {
+                MockResponse().setResponseCode(404)
+            }
         }
     }
 

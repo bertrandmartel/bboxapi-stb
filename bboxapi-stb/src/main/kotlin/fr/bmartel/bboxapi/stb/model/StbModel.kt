@@ -32,7 +32,11 @@ data class Application(
 data class Media(val mediaService: String, val mediaState: String, val mediaTitle: String, val positionId: String)
 data class Volume(val volume: String)
 
+data class MediaEvent(val mediaService: String, val mediaState: String, val mediaTitle: String, val positionId: Int)
+data class AppEvent(val packageName: String, val state: String)
+
+data class BboxApiError(val error: String)
 
 enum class Resource {
-    Media, Application, Message,test
+    Media, Application, Message
 }

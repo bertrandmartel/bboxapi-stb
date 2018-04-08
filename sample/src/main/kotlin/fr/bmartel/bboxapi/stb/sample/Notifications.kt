@@ -3,13 +3,12 @@ package fr.bmartel.bboxapi.stb.sample
 import com.github.kittinunf.result.Result
 import de.mannodermaus.rxbonjour.platforms.desktop.DesktopPlatform
 import fr.bmartel.bboxapi.stb.BboxApiStb
-import fr.bmartel.bboxapi.stb.model.Resource
-import fr.bmartel.bboxapi.stb.model.StbServiceEvent
+import fr.bmartel.bboxapi.stb.model.*
 
 fun main(args: Array<String>) {
     val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret", platform = DesktopPlatform.create())
     val appName = "myApplication"
-    val resourceList = listOf(Resource.Application, Resource.Media, Resource.Message, Resource.test)
+    val resourceList = listOf(Resource.Application, Resource.Media, Resource.Message)
 
     val listener = object : BboxApiStb.WebSocketListener {
         override fun onOpen() {
@@ -20,12 +19,20 @@ fun main(args: Array<String>) {
             println("websocket closed")
         }
 
-        override fun onMessage(text: String?) {
-            println("message received : $text")
-        }
-
         override fun onFailure(throwable: Throwable?) {
             throwable?.printStackTrace()
+        }
+
+        override fun onApp(app: AppEvent) {
+            println("application event : $app")
+        }
+
+        override fun onMedia(media: MediaEvent) {
+            println("channel change event : $media")
+        }
+
+        override fun onError(error: BboxApiError) {
+            println("error : $error")
         }
     }
 
