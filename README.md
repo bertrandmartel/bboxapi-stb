@@ -1,9 +1,9 @@
 # BboxApi STB client library #
 
-[![Build Status](https://travis-ci.org/bertrandmartel/bboxapi-stb.svg)](https://travis-ci.org/bertrandmartel/bboxapi-stb)
+[![CircleCI](https://img.shields.io/circleci/project/bertrandmartel/bboxapi-stb.svg?maxAge=2592000?style=plastic)](https://circleci.com/gh/bertrandmartel/bboxapi-stb)
 [![Download](https://api.bintray.com/packages/bertrandmartel/maven/bboxapi-stb/images/download.svg) ](https://bintray.com/bertrandmartel/maven/bboxapi-stb/_latestVersion)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/fr.bmartel/bboxapi-stb-android/badge.svg)](https://maven-badges.herokuapp.com/maven-central/fr.bmartel/bboxapi-stb-android)
-[![Javadoc](http://javadoc-badge.appspot.com/fr.bmartel/bboxapi-stb-android.svg?label=javadoc)](http://javadoc-badge.appspot.com/fr.bmartel/bboxapi-stb-android)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/fr.bmartel/bboxapi-stb/badge.svg)](https://maven-badges.herokuapp.com/maven-central/fr.bmartel/bboxapi-stb)
+[![Javadoc](http://javadoc-badge.appspot.com/fr.bmartel/bboxapi-stb.svg?label=javadoc)](http://javadoc-badge.appspot.com/fr.bmartel/bboxapi-stb)
 [![codecov](https://codecov.io/gh/bertrandmartel/bboxapi-stb/branch/master/graph/badge.svg)](https://codecov.io/gh/bertrandmartel/bboxapi-stb)
 [![License](http://img.shields.io/:license-mit-blue.svg)](LICENSE.md)
 
@@ -15,9 +15,12 @@
 
 ### MDNS
 
-- [x] discover Bbox API service
+- [x] discover Rest API service
+- [ ] discover Websocket API service (only for next version)
 
 ### REST
+
+#### Actions & Resources
 
 - [x] get channel list (`GET /media/tvchannellist`)
 - [x] get list of Android apps installed (`GET /applications`)
@@ -28,15 +31,19 @@
 - [x] start application (`POST /applications/$packageName`)
 - [x] display toast (`POST /userinterface/toast`)
 - [x] set volume (`POST /userinterface/volume`)
+
+#### Notifications
+
 - [x] register application for notifications (`POST /applications/register`)
+- [x] get all opened notification channels (`GET /notification`)
+- [x] subscribe notification with specific resource type (`POST /notification`)
+- [x] unsubscribe notification channel (`DELETE /notification/$channelId`)
+- [ ] create a notification on a specific channel (not working :no_good:) (`POST /notification/$channelId`)
 
 ### Websocket
 
-- [ ] open websocket stream for receiving notifications
-- [ ] get all opened channel
-- [ ] create a notification on a specific channel
-- [ ] subscribe notification
-- [ ] unsubscribe notifications
+- [x] open websocket stream for receiving notifications
+- [ ] parse notification message in protobuf protocol
 
 ## Tests
 
