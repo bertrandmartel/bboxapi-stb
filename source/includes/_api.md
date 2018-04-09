@@ -569,3 +569,61 @@ Start Android application by package name
 | Field | Type | Description |
 |-------|------|------------|
 | packageName | string | application package name (ex: com.google.youtube) | 
+
+## Custom HTTP request
+
+> Asynchronous
+
+```kotlin
+bboxapi.createCustomRequest(Fuel.get("/applications")) { _, _, result ->
+    when (result) {
+        is Result.Failure -> {
+            result.getException().printStackTrace()
+        }
+        is Result.Success -> {
+            println(String(result.get()))
+        }
+    }
+}
+```
+
+```java
+bboxapi.createCustomRequest(Fuel.get("/applications"), new Handler<byte[]>() {
+    @Override
+    public void success(Request request, Response response, byte[] data) {
+        System.out.println(new String(data));
+    }
+
+    @Override
+    public void failure(Request request, Response response, FuelError fuelError) {
+        fuelError.printStackTrace();
+    }
+});
+```
+
+> Synchronous
+
+```kotlin
+val (_, _, result) = bboxapi.createCustomRequestSync(Fuel.get("/applications"))
+when (result) {
+    is Result.Failure -> {
+        result.getException().printStackTrace()
+    }
+    is Result.Success -> {
+        println(String(result.get()))
+    }
+}
+```
+
+```java
+Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.createCustomRequestSync(Fuel.get("/applications"));
+
+Request request = data.getFirst();
+Response response = data.getSecond();
+Result<byte[], FuelError> obj = data.getThird();
+System.out.println(new String(obj.get()));
+```
+
+
+Create your own HTTP request, this can be useful for not relying on the library implementation
+
