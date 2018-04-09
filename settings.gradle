@@ -1,1 +1,0 @@
-include ':bboxapi-stb',':sample',':sample-java', ':bboxapi-stb-android'
