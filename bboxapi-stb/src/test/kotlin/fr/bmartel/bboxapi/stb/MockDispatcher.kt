@@ -18,7 +18,8 @@ const val APP_TEST = "fr.bmartel.android.app"
 
 val CHANNELS = listOf("15224372559540.29059489526787863", "15224372559540.29059489526787864", "15224372559540.29059489526787865")
 
-const val CHANNEL_ID = "15224372559540.29059489526787863"
+const val NOTIFICATION_CHANNEL_ID = "9876543210.29059489526787863"
+const val NOTIFICATION_APP_ID = "15224372559540.29059489526787863"
 
 var REGISTER_FAIL = false
 var SUBSCRIBE_FAIL = false
@@ -109,7 +110,7 @@ class MockDispatcher : Dispatcher() {
         val data = Gson().fromJson(request.body.readUtf8(), SubscribeRequest::class.java)
         if (!SUBSCRIBE_FAIL && data.appId != "" && data.resources.isNotEmpty()) {
             if (request.getHeader("x-sessionid") == SESSION_ID) {
-                return MockResponse().setResponseCode(200)
+                return MockResponse().setResponseCode(200).setHeader("Location", "http://localhost:8080/api.bbox.lan/v0/notification/$NOTIFICATION_CHANNEL_ID")
             }
             return MockResponse().setResponseCode(401)
         }
@@ -143,7 +144,7 @@ class MockDispatcher : Dispatcher() {
                 request.getHeader("Content-Type") == "application/json") {
             val register = Gson().fromJson(request.body.readUtf8(), RegisterRequest::class.java)
             if (register.appName != "") {
-                return MockResponse().setResponseCode(200).setHeader("Location", "http://localhost:8080/run/$CHANNEL_ID")
+                return MockResponse().setResponseCode(200).setHeader("Location", "http://localhost:8080/api.bbox.lan/v0/applications/run/$NOTIFICATION_APP_ID")
             }
         }
         return MockResponse().setResponseCode(401)

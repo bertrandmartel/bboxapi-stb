@@ -15,8 +15,8 @@ data class VolumeRequest(val volume: Int)
 data class RegisterRequest(val appName: String)
 data class ResourceItem(val resourceId: String)
 data class SubscribeRequest(val appId: String, val resources: List<ResourceItem>)
-data class NotificationChannel(val channelId: String?, val subscribeResult: Triple<Request, Response, Result<ByteArray, FuelError>>)
-//data class NotificationRequest(val appId: String, val message: String)
+data class NotificationChannel(val appId: String?, val channelId: String?, val subscribeResult: Triple<Request, Response, Result<ByteArray, FuelError>>)
+data class NotificationRequest(val appId: String, val message: String)
 
 data class Channel(val mediaState: String, val mediaTitle: String, val positionId: String)
 data class Application(
@@ -34,6 +34,7 @@ data class Volume(val volume: String)
 
 data class MediaEvent(val mediaService: String, val mediaState: String, val mediaTitle: String, val positionId: Int)
 data class AppEvent(val packageName: String, val state: String)
+data class MessageEvent(val message: String, val source: String)
 
 data class BboxApiError(val error: String)
 

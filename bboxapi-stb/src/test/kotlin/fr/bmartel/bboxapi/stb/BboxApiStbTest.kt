@@ -4,7 +4,6 @@ import com.github.kittinunf.fuel.core.FuelManager
 import com.github.kittinunf.fuel.core.HttpException
 import com.github.kittinunf.result.Result
 import com.google.gson.Gson
-import com.google.gson.JsonParser
 import de.mannodermaus.rxbonjour.BonjourBroadcastConfig
 import de.mannodermaus.rxbonjour.RxBonjour
 import de.mannodermaus.rxbonjour.drivers.jmdns.JmDNSDriver
@@ -31,7 +30,7 @@ open class BboxApiStbTest : TestCase() {
 
     companion object {
         private val mockServer = MockWebServer()
-        private val bboxApi = BboxApiStb(APP_ID, APP_SECRET, DesktopPlatform.create())
+        private val bboxApi = BboxApiStb(APP_ID, APP_SECRET)
         @BeforeClass
         @JvmStatic
         fun initMockServer() {
@@ -447,7 +446,7 @@ open class BboxApiStbTest : TestCase() {
 
         var found = false
 
-        bboxApi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000) { eventType, service, error ->
+        bboxApi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, service, error ->
             Assert.assertNotNull(service)
             Assert.assertNull(error)
             Assert.assertEquals(eventType, StbServiceEvent.SERVICE_FOUND)
@@ -465,7 +464,7 @@ open class BboxApiStbTest : TestCase() {
         found = false
         lock = CountDownLatch(1)
         disposable.dispose()
-        bboxApi.startRestDiscovery(findOneAndExit = true, maxDuration = 2000) { eventType, service, error ->
+        bboxApi.startRestDiscovery(findOneAndExit = true, maxDuration = 2000, platform = DesktopPlatform.create()) { eventType, service, error ->
             Assert.assertNull(service)
             Assert.assertNull(error)
             Assert.assertEquals(eventType, StbServiceEvent.DISCOVERY_STOPPED)
@@ -487,6 +486,7 @@ open class BboxApiStbTest : TestCase() {
         var mediaMessageReceived: MediaEvent? = null
         var appMessageReceived: AppEvent? = null
         var errorMessageReceived: BboxApiError? = null
+        var messageMessageReceived: MessageEvent? = null
 
         var serverOpened = false
         var serverClosed = false
@@ -557,13 +557,19 @@ open class BboxApiStbTest : TestCase() {
                         lock.countDown()
                     }
 
+                    override fun onMessage(message: MessageEvent) {
+                        messageMessageReceived = message
+                        lock.countDown()
+                    }
+
                     override fun onError(error: BboxApiError) {
                         errorMessageReceived = error
                         lock.countDown()
                     }
                 })
         Assert.assertNotNull(notificationChannel)
-        Assert.assertEquals(CHANNEL_ID, notificationChannel.channelId)
+        Assert.assertEquals(NOTIFICATION_CHANNEL_ID, notificationChannel.channelId)
+        Assert.assertEquals(NOTIFICATION_APP_ID, notificationChannel.appId)
         Assert.assertTrue(notificationChannel.subscribeResult.third is Result.Success)
 
         //wait for server to receive channel ID
@@ -575,12 +581,13 @@ open class BboxApiStbTest : TestCase() {
         Assert.assertNull(mediaMessageReceived)
         Assert.assertNull(appMessageReceived)
         Assert.assertNull(errorMessageReceived)
+        Assert.assertNull(messageMessageReceived)
         Assert.assertNull(throwable)
 
         //server
         Assert.assertTrue(serverOpened)
         Assert.assertFalse(serverClosed)
-        Assert.assertEquals(CHANNEL_ID, serverMessageReceived)
+        Assert.assertEquals(NOTIFICATION_APP_ID, serverMessageReceived)
         Assert.assertNull(serverError)
 
         Assert.assertNotNull(connection)
@@ -645,6 +652,9 @@ open class BboxApiStbTest : TestCase() {
         val notificationChannel = bboxApi.subscribeNotification("appName",
                 listOf(Resource.Application, Resource.Media, Resource.Message),
                 object : BboxApiStb.WebSocketListener {
+                    override fun onMessage(message: MessageEvent) {
+                    }
+
                     override fun onApp(app: AppEvent) {
                     }
 
@@ -674,6 +684,9 @@ open class BboxApiStbTest : TestCase() {
         val notificationChannel = bboxApi.subscribeNotification("appName",
                 listOf(Resource.Application, Resource.Media, Resource.Message),
                 object : BboxApiStb.WebSocketListener {
+                    override fun onMessage(message: MessageEvent) {
+                    }
+
                     override fun onApp(app: AppEvent) {
                     }
 

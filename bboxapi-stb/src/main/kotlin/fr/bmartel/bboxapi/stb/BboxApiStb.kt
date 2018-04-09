@@ -23,7 +23,7 @@ import kotlin.concurrent.schedule
 const val BBOXAPI_REST_SERVICE_TYPE = "_http._tcp"
 const val BBOXAPI_REST_SERVICE_NAME = "Bboxapi"
 
-class BboxApiStb(val appId: String, val appSecret: String, val platform: Platform) {
+class BboxApiStb(val appId: String, val appSecret: String) {
 
     var hasSessionId = false
 
@@ -53,6 +53,7 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
         fun onError(error: BboxApiError)
         fun onMedia(media: MediaEvent)
         fun onApp(app: AppEvent)
+        fun onMessage(message: MessageEvent)
         fun onFailure(throwable: Throwable?)
     }
 
@@ -114,14 +115,14 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(RegisterRequest(appName)))
     }
 
-    private fun buildSubscribeNotifRequest(channelId: String, resourceList: List<Resource>): Request {
+    private fun buildSubscribeNotifRequest(appId: String, resourceList: List<Resource>): Request {
         val list = mutableListOf<ResourceItem>()
         resourceList.forEach { it ->
             list.add(ResourceItem(it.name))
         }
         return Fuel.post("/notification")
                 .header(mapOf("Content-Type" to "application/json"))
-                .body(GsonBuilder().disableHtmlEscaping().create().toJson(SubscribeRequest(channelId, list)))
+                .body(GsonBuilder().disableHtmlEscaping().create().toJson(SubscribeRequest(appId, list)))
     }
 
     private fun buildUnsubscribeNotifRequest(channelId: String): Request {
@@ -132,18 +133,16 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
         return Fuel.get("/notification")
     }
 
-    /*
     private fun buildPostNotification(channelId: String, appId: String, message: String): Request {
         return Fuel.post("/notification/$channelId")
                 .header(mapOf("Content-Type" to "application/json"))
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(NotificationRequest(appId, message)))
     }
-    */
 
     /**
      * discover Bbox API Rest service.
      */
-    fun startRestDiscovery(findOneAndExit: Boolean = false, maxDuration: Int = 0, handler: (StbServiceEvent, StbService?, Throwable?) -> Unit) {
+    fun startRestDiscovery(findOneAndExit: Boolean = false, platform: Platform, maxDuration: Int = 0, handler: (StbServiceEvent, StbService?, Throwable?) -> Unit) {
         val rxBonjour = RxBonjour.Builder()
                 .platform(platform)
                 .driver(JmDNSDriver.create())
@@ -179,19 +178,22 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
         closeWebsocket()
         val registerRes = registerAppSync(appName)
         if (registerRes.third is Result.Failure) {
-            return NotificationChannel(null, registerRes)
+            return NotificationChannel(null, null, registerRes)
         }
 
         val location = registerRes.second.headers["Location"]?.get(0) ?: ""
-        val channelId = location.substring(location.lastIndexOf('/') + 1)
+        val appId = location.substring(location.lastIndexOf('/') + 1)
 
-        val subscribeRes = processSessionIdSync<ByteArray>(request = buildSubscribeNotifRequest(channelId, resourceList), json = false)
+        val subscribeRes = processSessionIdSync<ByteArray>(request = buildSubscribeNotifRequest(appId, resourceList), json = false)
         if (subscribeRes.third is Result.Failure) {
-            return NotificationChannel(null, subscribeRes)
+            return NotificationChannel(null, null, subscribeRes)
         }
+        val locationSubscribe = subscribeRes.second.headers["Location"]?.get(0) ?: ""
+        val channelId = locationSubscribe.substring(locationSubscribe.lastIndexOf('/') + 1)
+
         openWebsocket(object : okhttp3.WebSocketListener() {
             override fun onOpen(webSocket: WebSocket?, response: okhttp3.Response?) {
-                webSocket?.send(channelId)
+                webSocket?.send(appId)
                 listener.onOpen()
             }
 
@@ -209,6 +211,7 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
                                 when {
                                     data.get("resourceId").asString == "Media" -> listener.onMedia(Gson().fromJson(data.getAsJsonObject("body"), MediaEvent::class.java))
                                     data.get("resourceId").asString == "Application" -> listener.onApp(Gson().fromJson(data.getAsJsonObject("body"), AppEvent::class.java))
+                                    data.get("resourceId").asString == "Message" -> listener.onMessage(Gson().fromJson(data.getAsJsonObject("body"), MessageEvent::class.java))
                                     else -> listener.onError(BboxApiError("can't parse event : $text"))
                                 }
                             }
@@ -224,7 +227,7 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
                 listener.onFailure(t)
             }
         })
-        return NotificationChannel(channelId, registerRes)
+        return NotificationChannel(appId, channelId, registerRes)
     }
 
     fun openWebsocket(listener: okhttp3.WebSocketListener) {
@@ -586,9 +589,15 @@ class BboxApiStb(val appId: String, val appSecret: String, val platform: Platfor
         return getOpenedChannelsSync()
     }
 
-    /*
-    fun sendNotification(channelId: String, appId: String, message: String): Triple<Request, Response, Result<ByteArray, FuelError>> {
+    fun sendNotification(channelId: String, appId: String, message: String, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
+        return processSessionId(request = buildPostNotification(channelId, appId, message), handler = handler, json = false)
+    }
+
+    fun sendNotification(channelId: String, appId: String, message: String, handler: Handler<ByteArray>) {
+        return processSessionId(request = buildPostNotification(channelId, appId, message), handler = handler, json = false)
+    }
+
+    fun sendNotificationSync(channelId: String, appId: String, message: String): Triple<Request, Response, Result<ByteArray, FuelError>> {
         return processSessionIdSync(request = buildPostNotification(channelId, appId, message), json = false)
     }
-    */
 }
