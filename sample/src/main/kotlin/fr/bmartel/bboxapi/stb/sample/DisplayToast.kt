@@ -7,22 +7,31 @@ import fr.bmartel.bboxapi.stb.model.StbServiceEvent
 import fr.bmartel.bboxapi.stb.model.ToastRequest
 
 fun main(args: Array<String>) {
-    val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret", platform = DesktopPlatform.create())
+    val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret")
 
-    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000) { eventType, service, error ->
+    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, service, error ->
         when (eventType) {
             StbServiceEvent.SERVICE_FOUND -> {
-                bboxapi.displayToast(ToastRequest("this is a message")) { request, response, result ->
+                println("service found : ${service?.ip}:${service?.port}")
+                val toast = ToastRequest(message = "this is a message", pos_y = 500, pos_x = 200, color = "#FF0000")
+                bboxapi.displayToast(toast) { _, response, result ->
                     when (result) {
                         is Result.Failure -> {
-                            val ex = result.getException()
-                            ex.printStackTrace()
-                            println(request)
-                            println(response)
+                            result.getException().printStackTrace()
                         }
                         is Result.Success -> {
                             println(response.statusCode)
                         }
+                    }
+                }
+
+                val (_, res, result) = bboxapi.displayToastSync(toast)
+                when (result) {
+                    is Result.Failure -> {
+                        result.getException().printStackTrace()
+                    }
+                    is Result.Success -> {
+                        println(res.statusCode)
                     }
                 }
             }

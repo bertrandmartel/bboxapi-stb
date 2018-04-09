@@ -6,23 +6,29 @@ import fr.bmartel.bboxapi.stb.BboxApiStb
 import fr.bmartel.bboxapi.stb.model.StbServiceEvent
 
 fun main(args: Array<String>) {
-    val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret", platform = DesktopPlatform.create())
+    val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret")
 
-    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000) { eventType, service, error ->
+    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, service, error ->
         when (eventType) {
             StbServiceEvent.SERVICE_FOUND -> {
-                bboxapi.getVolume { request, response, result ->
+                bboxapi.getVolume { _, _, result ->
                     when (result) {
                         is Result.Failure -> {
-                            val ex = result.getException()
-                            ex.printStackTrace()
-                            println(request)
-                            println(response)
+                            result.getException().printStackTrace()
                         }
                         is Result.Success -> {
-                            val data = result.get()
-                            println(data)
+                            println(result.get())
                         }
+                    }
+                }
+
+                val (_, _, result) = bboxapi.getVolumeSync()
+                when (result) {
+                    is Result.Failure -> {
+                        result.getException().printStackTrace()
+                    }
+                    is Result.Success -> {
+                        println(result.get())
                     }
                 }
             }

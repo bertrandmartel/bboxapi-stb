@@ -6,33 +6,29 @@ import fr.bmartel.bboxapi.stb.BboxApiStb
 import fr.bmartel.bboxapi.stb.model.StbServiceEvent
 
 fun main(args: Array<String>) {
-    val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret", platform = DesktopPlatform.create())
+    val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret")
 
-    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000) { eventType, service, error ->
+    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, service, error ->
         when (eventType) {
             StbServiceEvent.SERVICE_FOUND -> {
                 bboxapi.getChannels { _, _, result ->
                     when (result) {
                         is Result.Failure -> {
-                            val ex = result.getException()
-                            ex.printStackTrace()
+                            result.getException().printStackTrace()
                         }
                         is Result.Success -> {
-                            val data = result.get()
-                            println(data)
+                            println(result.get())
                         }
                     }
                 }
-                bboxapi.getApps { _, _, result ->
-                    when (result) {
-                        is Result.Failure -> {
-                            val ex = result.getException()
-                            ex.printStackTrace()
-                        }
-                        is Result.Success -> {
-                            val data = result.get()
-                            println(data)
-                        }
+
+                val (_, _, result) = bboxapi.getChannelsSync()
+                when (result) {
+                    is Result.Failure -> {
+                        result.getException().printStackTrace()
+                    }
+                    is Result.Success -> {
+                        println(result.get())
                     }
                 }
             }
