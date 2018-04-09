@@ -9,7 +9,7 @@
 
 [Bbox Miami API](https://api.bbox.fr/doc/#API%20Box) client library for Kotlin/Java/Android
 
-:construction: Documentation coming soon :construction:
+**[Go to Documentation](http://bertrandmartel.github.io/bboxapi-stb)**
 
 ## Features
 
@@ -38,7 +38,7 @@
 - [x] get all opened notification channels (`GET /notification`)
 - [x] subscribe notification with specific resource type (`POST /notification`)
 - [x] unsubscribe notification channel (`DELETE /notification/$channelId`)
-- [ ] create a notification on a specific channel (not working :no_good:) (`POST /notification/$channelId`)
+- [x] create a notification on a specific channel (`POST /notification/$channelId`)
 
 ### Websocket
 
