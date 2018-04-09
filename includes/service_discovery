@@ -1,0 +1,74 @@
+<h1 id='service-discovery'>Service discovery</h1>
+<blockquote>
+<p>Desktop platform</p>
+</blockquote>
+<pre class="highlight kotlin tab-kotlin"><code><span class="kd">val</span> <span class="py">bboxapi</span> <span class="p">=</span> <span class="n">BboxApiStb</span><span class="p">(</span><span class="n">appId</span> <span class="p">=</span> <span class="s">"YourAppId"</span><span class="p">,</span> <span class="n">appSecret</span> <span class="p">=</span> <span class="s">"YourAppSecret"</span><span class="p">)</span>
+
+<span class="n">bboxapi</span><span class="p">.</span><span class="n">startRestDiscovery</span><span class="p">(</span><span class="n">findOneAndExit</span> <span class="p">=</span> <span class="k">true</span><span class="p">,</span> <span class="n">maxDuration</span> <span class="p">=</span> <span class="m">10000</span><span class="p">,</span> <span class="n">platform</span> <span class="p">=</span> <span class="n">DesktopPlatform</span><span class="p">.</span><span class="n">create</span><span class="p">())</span> <span class="p">{</span> <span class="n">eventType</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">error</span> <span class="p">-&gt;</span>
+    <span class="k">when</span> <span class="p">(</span><span class="n">eventType</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">StbServiceEvent</span><span class="p">.</span><span class="n">SERVICE_FOUND</span> <span class="p">-&gt;</span> <span class="n">println</span><span class="p">(</span><span class="s">"service found : ${service?.ip}:${service?.port}"</span><span class="p">)</span>
+        <span class="n">StbServiceEvent</span><span class="p">.</span><span class="n">DISCOVERY_STOPPED</span> <span class="p">-&gt;</span> <span class="n">println</span><span class="p">(</span><span class="s">"end of discovery"</span><span class="p">)</span>
+        <span class="n">StbServiceEvent</span><span class="p">.</span><span class="n">DISCOVERY_ERROR</span> <span class="p">-&gt;</span> <span class="n">error</span><span class="o">?.</span><span class="n">printStackTrace</span><span class="p">()</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre><pre class="highlight java tab-java"><code><span class="n">BboxApiStb</span> <span class="n">bboxapi</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BboxApiStb</span><span class="o">(</span><span class="s">"YourAppId"</span><span class="o">,</span> <span class="s">"YourAppSecret"</span><span class="o">);</span>
+
+<span class="n">bboxapi</span><span class="o">.</span><span class="na">startRestDiscovery</span><span class="o">(</span><span class="kc">true</span><span class="o">,</span> <span class="n">DesktopPlatform</span><span class="o">.</span><span class="na">create</span><span class="o">(),</span> <span class="mi">10000</span><span class="o">,</span> <span class="o">(</span><span class="n">stbServiceEvent</span><span class="o">,</span> <span class="n">stbService</span><span class="o">,</span> <span class="n">throwable</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span>
+    <span class="k">switch</span> <span class="o">(</span><span class="n">stbServiceEvent</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">case</span> <span class="nl">SERVICE_FOUND:</span>
+            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"service found : "</span> <span class="o">+</span> <span class="n">stbService</span><span class="o">.</span><span class="na">getIp</span><span class="o">()</span> <span class="o">+</span> <span class="s">":"</span> <span class="o">+</span> <span class="n">stbService</span><span class="o">.</span><span class="na">getPort</span><span class="o">());</span>
+            <span class="k">break</span><span class="o">;</span>
+        <span class="k">case</span> <span class="nl">DISCOVERY_STOPPED:</span>
+            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"end of discovery"</span><span class="o">);</span>
+            <span class="k">break</span><span class="o">;</span>
+        <span class="k">case</span> <span class="nl">DISCOVERY_ERROR:</span>
+            <span class="n">throwable</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+            <span class="k">break</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+<span class="o">});</span>
+</code></pre>
+<blockquote>
+<p>Android platform </p>
+</blockquote>
+<pre class="highlight kotlin tab-kotlin"><code><span class="kd">val</span> <span class="py">bboxapi</span> <span class="p">=</span> <span class="n">BboxApiStb</span><span class="p">(</span><span class="n">appId</span> <span class="p">=</span> <span class="s">"YourAppId"</span><span class="p">,</span> <span class="n">appSecret</span> <span class="p">=</span> <span class="s">"YourAppSecret"</span><span class="p">)</span>
+
+<span class="n">bboxapi</span><span class="p">.</span><span class="n">startRestDiscovery</span><span class="p">(</span><span class="n">findOneAndExit</span> <span class="p">=</span> <span class="k">true</span><span class="p">,</span> <span class="n">maxDuration</span> <span class="p">=</span> <span class="m">10000</span><span class="p">,</span> <span class="n">platform</span> <span class="p">=</span> <span class="n">AndroidPlatform</span><span class="p">.</span><span class="n">create</span><span class="p">())</span> <span class="p">{</span> <span class="n">eventType</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">error</span> <span class="p">-&gt;</span>
+    <span class="k">when</span> <span class="p">(</span><span class="n">eventType</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">StbServiceEvent</span><span class="p">.</span><span class="n">SERVICE_FOUND</span> <span class="p">-&gt;</span> <span class="n">println</span><span class="p">(</span><span class="s">"service found : ${service?.ip}:${service?.port}"</span><span class="p">)</span>
+        <span class="n">StbServiceEvent</span><span class="p">.</span><span class="n">DISCOVERY_STOPPED</span> <span class="p">-&gt;</span> <span class="n">println</span><span class="p">(</span><span class="s">"end of discovery"</span><span class="p">)</span>
+        <span class="n">StbServiceEvent</span><span class="p">.</span><span class="n">DISCOVERY_ERROR</span> <span class="p">-&gt;</span> <span class="n">error</span><span class="o">?.</span><span class="n">printStackTrace</span><span class="p">()</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre><pre class="highlight java tab-java"><code><span class="n">BboxApiStb</span> <span class="n">bboxapi</span> <span class="o">=</span> <span class="k">new</span> <span class="n">BboxApiStb</span><span class="o">(</span><span class="s">"YourAppId"</span><span class="o">,</span> <span class="s">"YourAppSecret"</span><span class="o">);</span>
+
+<span class="n">bboxapi</span><span class="o">.</span><span class="na">startRestDiscovery</span><span class="o">(</span><span class="kc">true</span><span class="o">,</span> <span class="n">AndroidPlatform</span><span class="o">.</span><span class="na">create</span><span class="o">(),</span> <span class="mi">10000</span><span class="o">,</span> <span class="o">(</span><span class="n">stbServiceEvent</span><span class="o">,</span> <span class="n">stbService</span><span class="o">,</span> <span class="n">throwable</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="o">{</span>
+    <span class="k">switch</span> <span class="o">(</span><span class="n">stbServiceEvent</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">case</span> <span class="nl">SERVICE_FOUND:</span>
+            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"service found : "</span> <span class="o">+</span> <span class="n">stbService</span><span class="o">.</span><span class="na">getIp</span><span class="o">()</span> <span class="o">+</span> <span class="s">":"</span> <span class="o">+</span> <span class="n">stbService</span><span class="o">.</span><span class="na">getPort</span><span class="o">());</span>
+            <span class="k">break</span><span class="o">;</span>
+        <span class="k">case</span> <span class="nl">DISCOVERY_STOPPED:</span>
+            <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"end of discovery"</span><span class="o">);</span>
+            <span class="k">break</span><span class="o">;</span>
+        <span class="k">case</span> <span class="nl">DISCOVERY_ERROR:</span>
+            <span class="n">throwable</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
+            <span class="k">break</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="k">return</span> <span class="n">Unit</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">;</span>
+<span class="o">});</span>
+</code></pre>
+<p>In order to find Bbox Miami IP adress, use the mDNS broadcast feature exposed by BboxAPI Miami service</p>
+
+<p>You have to add the following dependency depending on platform : </p>
+
+<ul>
+<li>Desktop : <code>implementation &quot;de.mannodermaus.rxjava2:rxbonjour-platform-desktop:2.0.0-RC1&quot;</code></li>
+<li>Android : <code>implementation &quot;de.mannodermaus.rxjava2:rxbonjour-platform-android:2.0.0-RC1&quot;</code></li>
+</ul>
+
+<p>Also using <code>startRestDiscovery</code> :</p>
+
+<ul>
+<li>setting <code>findOneAndExit</code> to <code>true</code> will automatically end the discovery when one service is found</li>
+<li>setting <code>maxDuration</code> parameter will set a max duration in milliseconds for service discovery</li>
+</ul>
