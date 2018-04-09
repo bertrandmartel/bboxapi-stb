@@ -127,7 +127,7 @@ install {
             whenConfigured {
                 p ->
                     p.dependencies = p.dependencies.findAll {
-                        dep -> (dep.artifactId.notIn(["junit", "mockwebserver", "jsonassert"]))
+                        dep -> (dep.artifactId.notIn(["junit", "mockwebserver", "jsonassert","rxbonjour-driver-jmdns","robolectric","mockito-kotlin"]))
                     }
             }
         }
