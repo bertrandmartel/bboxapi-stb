@@ -600,4 +600,16 @@ class BboxApiStb(val appId: String, val appSecret: String) {
     fun sendNotificationSync(channelId: String, appId: String, message: String): Triple<Request, Response, Result<ByteArray, FuelError>> {
         return processSessionIdSync(request = buildPostNotification(channelId, appId, message), json = false)
     }
+
+    fun createCustomRequest(request: Request, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
+        return processSessionId(request = request, handler = handler, json = false)
+    }
+
+    fun createCustomRequest(request: Request, handler: Handler<ByteArray>) {
+        return processSessionId(request = request, handler = handler, json = false)
+    }
+
+    fun createCustomRequestSync(request: Request): Triple<Request, Response, Result<ByteArray, FuelError>> {
+        return processSessionIdSync(request = request, json = false)
+    }
 }

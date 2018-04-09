@@ -5,6 +5,7 @@ import com.github.kittinunf.result.Result
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
+import com.google.gson.reflect.TypeToken
 import fr.bmartel.bboxapi.android.stb.TestCase
 import org.hamcrest.CoreMatchers
 import org.hamcrest.MatcherAssert
@@ -12,7 +13,6 @@ import org.junit.Assert
 import org.skyscreamer.jsonassert.JSONAssert
 import java.io.File
 import java.net.UnknownHostException
-import java.util.concurrent.CountDownLatch
 
 class TestUtils {
 
@@ -302,6 +302,107 @@ class TestUtils {
 
             } else {
                 JSONAssert.assertEquals(data.getAsJsonObject("body").toString(), Gson().toJson(response), false)
+            }
+        }
+
+        inline fun <reified U> checkCustomResponse(testcase: TestCase,
+                                                   inputReq: Request,
+                                                   filename: String?,
+                                                   expectedException: Exception?,
+                                                   body: (Request, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) -> Unit) {
+            var request: Request? = null
+            var response: Response? = null
+            var data: ByteArray? = null
+            var err: FuelError? = null
+            body(inputReq) { req, res, result ->
+                request = req
+                response = res
+                val (d, e) = result
+                data = d
+                err = e
+                testcase.lock.countDown()
+            }
+            testcase.await()
+            checkFuelResponseResult<U>(filename = filename,
+                    request = request,
+                    response = response,
+                    data = data ?: ByteArray(0),
+                    err = err,
+                    expectedException = expectedException)
+        }
+
+
+        inline fun <reified U> checkCustomResponseCb(testcase: TestCase,
+                                                     inputReq: Request,
+                                                     filename: String?,
+                                                     expectedException: Exception?,
+                                                     body: (Request, handler: Handler<ByteArray>) -> Unit) {
+            var request: Request? = null
+            var response: Response? = null
+            var data: ByteArray? = null
+            var err: FuelError? = null
+            body(inputReq, object : Handler<ByteArray> {
+                override fun failure(req: Request, res: Response, e: FuelError) {
+                    request = req
+                    response = res
+                    err = e
+                    testcase.lock.countDown()
+                }
+
+                override fun success(req: Request, res: Response, d: ByteArray) {
+                    request = req
+                    response = res
+                    data = d
+                    testcase.lock.countDown()
+                }
+            })
+            testcase.await()
+            checkFuelResponseResult<U>(filename = filename,
+                    request = request,
+                    response = response,
+                    data = data ?: ByteArray(0),
+                    err = err,
+                    expectedException = expectedException)
+        }
+
+        inline fun <reified U> checkCustomResponseSync(
+                inputReq: Request,
+                filename: String?,
+                expectedException: Exception?,
+                body: (Request) -> Triple<Request, Response, *>) {
+            val (request, response, result) = body(inputReq)
+            val (data, err) = result as Result<ByteArray, FuelError>
+
+            checkFuelResponseResult<U>(filename = filename,
+                    request = request,
+                    response = response,
+                    data = data ?: ByteArray(0),
+                    err = err,
+                    expectedException = expectedException)
+        }
+
+        //https://stackoverflow.com/a/33381385/2614364
+        inline fun <reified T> Gson.fromJson(json: String) = this.fromJson<T>(json, object : TypeToken<T>() {}.type)
+
+        inline fun <reified U> checkFuelResponseResult(filename: String?,
+                                                       request: Request?,
+                                                       response: Response?,
+                                                       data: ByteArray,
+                                                       err: FuelError?,
+                                                       expectedException: Exception?) {
+            Assert.assertNotNull(request)
+            Assert.assertNotNull(response)
+            if (expectedException != null) {
+                Assert.assertNull(data)
+                checkFullError(fuelError = err, expectedException = expectedException)
+            } else {
+                Assert.assertNull(err)
+                Assert.assertNotNull(data)
+                if (filename != null) {
+                    JSONAssert.assertEquals(
+                            TestUtils.getResTextFile(fileName = filename),
+                            Gson().toJson(Gson().fromJson<U>(String(data))), false)
+                }
             }
         }
     }

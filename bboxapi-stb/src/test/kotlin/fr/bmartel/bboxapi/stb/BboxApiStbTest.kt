@@ -1,5 +1,6 @@
 package fr.bmartel.bboxapi.stb
 
+import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.FuelManager
 import com.github.kittinunf.fuel.core.HttpException
 import com.github.kittinunf.result.Result
@@ -252,6 +253,38 @@ open class BboxApiStbTest : TestCase() {
     @Test
     fun getOpenedChannelsSync() {
         TestUtils.executeSync(filename = "opened_channels.json", body = bboxApi::getOpenedChannelsSync)
+    }
+
+    @Test
+    fun createCustomRequest() {
+        TestUtils.checkCustomResponse<List<Application>>(
+                testcase = this,
+                inputReq = Fuel.get("/applications"),
+                expectedException = null,
+                filename = "apps.json",
+                body = bboxApi::createCustomRequest
+        )
+    }
+
+    @Test
+    fun createCustomRequestCb() {
+        TestUtils.checkCustomResponseCb<List<Application>>(
+                testcase = this,
+                inputReq = Fuel.get("/applications"),
+                expectedException = null,
+                filename = "apps.json",
+                body = bboxApi::createCustomRequest
+        )
+    }
+
+    @Test
+    fun createCustomRequestSync() {
+        TestUtils.checkCustomResponseSync<List<Application>>(
+                inputReq = Fuel.get("/applications"),
+                expectedException = null,
+                filename = "apps.json",
+                body = bboxApi::createCustomRequestSync
+        )
     }
 
     @Test
