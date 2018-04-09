@@ -255,6 +255,38 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
+    fun sendNotification() {
+        TestUtils.executeAsyncThreeParam(
+                input1 = NOTIFICATION_CHANNEL_ID,
+                input2 = NOTIFICATION_APP_ID,
+                input3 = "some message",
+                testcase = this,
+                filename = null,
+                body = bboxApi::sendNotification)
+    }
+
+    @Test
+    fun sendNotificationCb() {
+        TestUtils.executeAsyncThreeParamCb(
+                input1 = NOTIFICATION_CHANNEL_ID,
+                input2 = NOTIFICATION_APP_ID,
+                input3 = "some message",
+                testcase = this,
+                filename = null,
+                body = bboxApi::sendNotification)
+    }
+
+    @Test
+    fun sendNotificationSync() {
+        TestUtils.executeThreeParamsSync(
+                input1 = NOTIFICATION_CHANNEL_ID,
+                input2 = NOTIFICATION_APP_ID,
+                input3 = "some message",
+                filename = null,
+                body = bboxApi::sendNotificationSync)
+    }
+
+    @Test
     fun unsubscribeAllSync() {
         TestUtils.executeSync(filename = "opened_channels.json", body = bboxApi::unsubscribeAllSync)
     }
@@ -608,6 +640,12 @@ open class BboxApiStbTest : TestCase() {
         connection?.send(TestUtils.getResTextFile("websocket_application.json"))
         lock.await()
         TestUtils.sendNotificationAndWait(filename = "websocket_application.json", response = appMessageReceived)
+
+        //send Message notification
+        lock = CountDownLatch(1)
+        connection?.send(TestUtils.getResTextFile("websocket_message.json"))
+        lock.await()
+        TestUtils.sendNotificationAndWait(filename = "websocket_message.json", response = messageMessageReceived)
 
         //send Error notification
         lock = CountDownLatch(1)

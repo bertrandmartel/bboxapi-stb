@@ -56,6 +56,37 @@ class TestUtils {
                     json = json)
         }
 
+        fun <T, A, B, C> executeAsyncThreeParam(input1: A,
+                                                input2: B,
+                                                input3: C,
+                                                testcase: TestCase,
+                                                filename: String?,
+                                                body: (input1: A, input2: B, input3: C, handler: (Request, Response, Result<*, FuelError>) -> Unit) -> T,
+                                                expectedException: Exception? = null,
+                                                json: Boolean = true) {
+            var request: Request? = null
+            var response: Response? = null
+            var data: Any? = null
+            var err: FuelError? = null
+            body(input1, input2, input3) { req, res, result ->
+                request = req
+                response = res
+                val (d, e) = result
+                data = d
+                err = e
+                testcase.lock.countDown()
+            }
+            testcase.await()
+            checkAsyncResult(
+                    filename = filename,
+                    request = request,
+                    response = response,
+                    data = data,
+                    err = err,
+                    expectedException = expectedException,
+                    json = json)
+        }
+
         fun <T, Y> executeAsyncOneParamCb(input: Y,
                                           testcase: TestCase,
                                           filename: String?,
@@ -93,10 +124,55 @@ class TestUtils {
                     json = json)
         }
 
+        fun <T, A, B, C> executeAsyncThreeParamCb(input1: A,
+                                                  input2: B,
+                                                  input3: C,
+                                                  testcase: TestCase,
+                                                  filename: String?,
+                                                  body: (input1: A, input2: B, input3: C, handler: Handler<T>) -> T,
+                                                  expectedException: Exception? = null,
+                                                  json: Boolean = true) {
+            var request: Request? = null
+            var response: Response? = null
+            var data: Any? = null
+            var err: FuelError? = null
+
+            body(input1, input2, input3, object : Handler<T> {
+                override fun failure(req: Request, res: Response, e: FuelError) {
+                    request = req
+                    response = res
+                    err = e
+                    testcase.lock.countDown()
+                }
+
+                override fun success(req: Request, res: Response, d: T) {
+                    request = req
+                    response = res
+                    data = d
+                    testcase.lock.countDown()
+                }
+            })
+            testcase.await()
+            checkAsyncResult(
+                    filename = filename,
+                    request = request,
+                    response = response,
+                    data = data,
+                    err = err,
+                    expectedException = expectedException,
+                    json = json)
+        }
+
         fun <T, Y> executeSyncOneParam(filename: String?, input: Y, body: (input: Y) -> T, expectedException: Exception? = null, json: Boolean = true) {
             val (_, response, result) = body(input) as Triple<Request, Response, *>
             val (data, err) = result as Result<*, FuelError>
             checkSyncResult(filename = filename, response = response, data = data, err = err, expectedException = expectedException, json = json)
+        }
+
+        fun <T, A, B, C> executeThreeParamsSync(filename: String?, input1: A, input2: B, input3: C, body: (input1: A, input2: B, input3: C) -> T, expectedException: Exception? = null) {
+            val (_, response, result) = body(input1, input2, input3) as Triple<Request, Response, *>
+            val (data, err) = result as Result<*, FuelError>
+            checkSyncResult(filename = filename, response = response, data = data, err = err, expectedException = expectedException)
         }
 
         fun <T> executeSync(filename: String?, body: () -> T, expectedException: Exception? = null) {

@@ -41,6 +41,7 @@ class MockDispatcher : Dispatcher() {
             request.method == "GET" && request.path == "/api.bbox.lan/v0/media" -> sendResponse(request = request, fileName = "current_channel.json")
             request.method == "GET" && request.path == "/api.bbox.lan/v0/userinterface/volume" -> sendResponse(request = request, fileName = "volume.json")
             request.method == "DELETE" && request.path.startsWith("/api.bbox.lan/v0/notification/") -> sendUnsubscribeResponse(request = request)
+            request.method == "POST" && request.path.startsWith("/api.bbox.lan/v0/notification/") -> sendNotificationResponse(request = request)
             request.method == "GET" && request.path == "/api.bbox.lan/v0/notification" -> sendResponse(request = request, fileName = "opened_channels.json")
             request.method == "POST" && request.path == "/api.bbox.lan/v0/notification" -> sendSubscribeResponse(request = request)
             else -> {
@@ -102,6 +103,20 @@ class MockDispatcher : Dispatcher() {
         }
         if (request.getHeader("x-sessionid") == SESSION_ID) {
             return MockResponse().setResponseCode(200)
+        }
+        return MockResponse().setResponseCode(401)
+    }
+
+    private fun sendNotificationResponse(request: RecordedRequest): MockResponse {
+        val pattern = Pattern.compile("/api.bbox.lan/v0/notification/(.*)")
+        val matcher = pattern.matcher(request.path)
+        if (matcher.find()) {
+            val data = Gson().fromJson(request.body.readUtf8(), NotificationRequest::class.java)
+            if (matcher.group(1) == NOTIFICATION_CHANNEL_ID && data.appId == NOTIFICATION_APP_ID) {
+                if (request.getHeader("x-sessionid") == SESSION_ID) {
+                    return MockResponse().setResponseCode(200)
+                }
+            }
         }
         return MockResponse().setResponseCode(401)
     }
