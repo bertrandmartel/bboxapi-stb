@@ -627,3 +627,4 @@ System.out.println(new String(obj.get()));
 
 Create your own HTTP request, this can be useful for not relying on the library implementation
 
+**All request construction are prefixed with [http://$boxIp:$boxRestPort/api.bbox.lan/v0](http://$boxIp:$boxRestPort/api.bbox.lan/v0) if host is not specified**
