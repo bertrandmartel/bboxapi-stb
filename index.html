@@ -1154,6 +1154,8 @@ with Gradle, from JCenter or MavenCentral :</p>
 <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="k">new</span> <span class="n">String</span><span class="o">(</span><span class="n">obj</span><span class="o">.</span><span class="na">get</span><span class="o">()));</span>
 </code></pre>
 <p>Create your own HTTP request, this can be useful for not relying on the library implementation</p>
+
+<p><strong>All request construction are prefixed with <a href="http://$boxIp:$boxRestPort/api.bbox.lan/v0">http://$boxIp:$boxRestPort/api.bbox.lan/v0</a> if host is not specified</strong></p>
 <h1 id='notifications'>Notifications</h1>
 <p>BboxAPI Miami service dispatch notifications via WebSocket on port 9090. This library abstracts all the flow involving app registering, subscribing to events &amp; opening websocket. This flow is described <a href="https://api.bbox.fr/doc/#SDK%20Mobile">here</a></p>
 <h2 id='subscribe-notifications'>Subscribe notifications</h2><pre class="highlight kotlin tab-kotlin"><code><span class="kd">val</span> <span class="py">notificationChannel</span> <span class="p">=</span> <span class="n">bboxapi</span><span class="p">.</span><span class="n">subscribeNotification</span><span class="p">(</span>
