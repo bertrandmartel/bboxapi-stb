@@ -575,7 +575,7 @@ Start Android application by package name
 > Asynchronous
 
 ```kotlin
-bboxapi.createCustomRequest(Fuel.get("/applications")) { _, _, result ->
+bboxapi.createCustomRequest(bboxapi.manager.request(method = Method.GET, path = "/applications")) { _, _, result ->
     when (result) {
         is Result.Failure -> {
             result.getException().printStackTrace()
@@ -588,7 +588,7 @@ bboxapi.createCustomRequest(Fuel.get("/applications")) { _, _, result ->
 ```
 
 ```java
-bboxapi.createCustomRequest(Fuel.get("/applications"), new Handler<byte[]>() {
+bboxapi.createCustomRequest(bboxapi.getManager().request(Method.GET, "/applications", null), new Handler<byte[]>() {
     @Override
     public void success(Request request, Response response, byte[] data) {
         System.out.println(new String(data));
@@ -604,7 +604,7 @@ bboxapi.createCustomRequest(Fuel.get("/applications"), new Handler<byte[]>() {
 > Synchronous
 
 ```kotlin
-val (_, _, result) = bboxapi.createCustomRequestSync(Fuel.get("/applications"))
+val (_, _, result) = bboxapi.createCustomRequestSync(bboxapi.manager.request(method = Method.GET, path = "/applications"))
 when (result) {
     is Result.Failure -> {
         result.getException().printStackTrace()
@@ -616,7 +616,7 @@ when (result) {
 ```
 
 ```java
-Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.createCustomRequestSync(Fuel.get("/applications"));
+Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.createCustomRequestSync(bboxapi.getManager().request(Method.GET, "/applications", null));
 
 Request request = data.getFirst();
 Response response = data.getSecond();
