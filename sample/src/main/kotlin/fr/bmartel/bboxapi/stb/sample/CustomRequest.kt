@@ -1,6 +1,6 @@
 package fr.bmartel.bboxapi.stb.sample
 
-import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.Method
 import com.github.kittinunf.result.Result
 import de.mannodermaus.rxbonjour.platforms.desktop.DesktopPlatform
 import fr.bmartel.bboxapi.stb.BboxApiStb
@@ -14,7 +14,7 @@ fun main(args: Array<String>) {
             StbServiceEvent.SERVICE_FOUND -> {
                 println("service found : ${service?.ip}:${service?.port}")
 
-                bboxapi.createCustomRequest(Fuel.get("/applications")) { _, _, result ->
+                bboxapi.createCustomRequest(bboxapi.manager.request(method = Method.GET, path = "/applications")) { _, _, result ->
                     when (result) {
                         is Result.Failure -> {
                             result.getException().printStackTrace()
@@ -25,7 +25,7 @@ fun main(args: Array<String>) {
                     }
                 }
 
-                val (_, _, result) = bboxapi.createCustomRequestSync(Fuel.get("/applications"))
+                val (_, _, result) = bboxapi.createCustomRequestSync(bboxapi.manager.request(method = Method.GET, path = "/applications"))
                 when (result) {
                     is Result.Failure -> {
                         result.getException().printStackTrace()

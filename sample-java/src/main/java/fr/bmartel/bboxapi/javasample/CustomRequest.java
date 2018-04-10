@@ -1,10 +1,6 @@
 package fr.bmartel.bboxapi.javasample;
 
-import com.github.kittinunf.fuel.Fuel;
-import com.github.kittinunf.fuel.core.FuelError;
-import com.github.kittinunf.fuel.core.Handler;
-import com.github.kittinunf.fuel.core.Request;
-import com.github.kittinunf.fuel.core.Response;
+import com.github.kittinunf.fuel.core.*;
 import com.github.kittinunf.result.Result;
 import de.mannodermaus.rxbonjour.platforms.desktop.DesktopPlatform;
 import fr.bmartel.bboxapi.stb.BboxApiStb;
@@ -21,7 +17,7 @@ public class CustomRequest {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
 
-                    bboxapi.createCustomRequest(Fuel.get("/applications"), new Handler<byte[]>() {
+                    bboxapi.createCustomRequest(bboxapi.getManager().request(Method.GET, "/applications", null), new Handler<byte[]>() {
                         @Override
                         public void success(Request request, Response response, byte[] data) {
                             System.out.println(new String(data));
@@ -33,7 +29,7 @@ public class CustomRequest {
                         }
                     });
 
-                    Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.createCustomRequestSync(Fuel.get("/applications"));
+                    Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.createCustomRequestSync(bboxapi.getManager().request(Method.GET, "/applications", null));
                     Request request = data.getFirst();
                     Response response = data.getSecond();
                     Result<byte[], FuelError> obj = data.getThird();

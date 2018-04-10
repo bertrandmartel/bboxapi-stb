@@ -1,6 +1,5 @@
 package fr.bmartel.bboxapi.stb
 
-import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.*
 import com.github.kittinunf.fuel.gson.gsonDeserializerOf
 import com.github.kittinunf.result.Result
@@ -47,6 +46,8 @@ class BboxApiStb(val appId: String, val appSecret: String) {
 
     var websocket: WebSocket? = null
 
+    val manager = FuelManager()
+
     interface WebSocketListener {
         fun onOpen()
         fun onClose()
@@ -57,60 +58,64 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         fun onFailure(throwable: Throwable?)
     }
 
+    fun setBasePath(basePath: String) {
+        manager.basePath = basePath
+    }
+
     private fun buildTokenRequest(): Request {
-        return Fuel.post("$cloudHost/v1.3/security/token")
+        return manager.request(method = Method.POST, path = "$cloudHost/v1.3/security/token")
                 .header(mapOf("Content-Type" to "application/json"))
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(TokenRequest(appId = appId, appSecret = appSecret)))
     }
 
     private fun buildSessionIdRequest(token: String): Request {
-        return Fuel.post("/security/sessionId")
+        return manager.request(method = Method.POST, path = "/security/sessionId")
                 .header(mapOf("Content-Type" to "application/json"))
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(SessionIdRequest(token = token)))
     }
 
     private fun buildChannelListRequest(): Request {
-        return Fuel.get("/media/tvchannellist")
+        return manager.request(method = Method.GET, path = "/media/tvchannellist")
     }
 
     private fun buildAppsRequest(): Request {
-        return Fuel.get("/applications")
+        return manager.request(method = Method.GET, path = "/applications")
     }
 
     private fun buildAppInfoRequest(packageName: String): Request {
-        return Fuel.get("/applications/$packageName")
+        return manager.request(method = Method.GET, path = "/applications/$packageName")
     }
 
     private fun buildAppIconRequest(packageName: String): Request {
-        return Fuel.get("/applications/$packageName/image")
+        return manager.request(method = Method.GET, path = "/applications/$packageName/image")
     }
 
     private fun buildCurrentChannelRequest(): Request {
-        return Fuel.get("/media")
+        return manager.request(method = Method.GET, path = "/media")
     }
 
     private fun buildVolumeRequest(): Request {
-        return Fuel.get("/userinterface/volume")
+        return manager.request(method = Method.GET, path = "/userinterface/volume")
     }
 
     private fun buildStartAppRequest(packageName: String): Request {
-        return Fuel.post("/applications/$packageName")
+        return manager.request(method = Method.POST, path = "/applications/$packageName")
     }
 
     private fun buildDisplayToastRequest(toast: ToastRequest): Request {
-        return Fuel.post("/userinterface/toast")
+        return manager.request(method = Method.POST, path = "/userinterface/toast")
                 .header(mapOf("Content-Type" to "application/json"))
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(toast))
     }
 
     private fun buildSetVolumeRequest(volume: Int): Request {
-        return Fuel.post("/userinterface/volume")
+        return manager.request(method = Method.POST, path = "/userinterface/volume")
                 .header(mapOf("Content-Type" to "application/json"))
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(VolumeRequest(volume)))
     }
 
     private fun buildRegisterAppRequest(appName: String): Request {
-        return Fuel.post("/applications/register")
+        return manager.request(method = Method.POST, path = "/applications/register")
                 .header(mapOf("Content-Type" to "application/json"))
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(RegisterRequest(appName)))
     }
@@ -120,21 +125,21 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         resourceList.forEach { it ->
             list.add(ResourceItem(it.name))
         }
-        return Fuel.post("/notification")
+        return manager.request(method = Method.POST, path = "/notification")
                 .header(mapOf("Content-Type" to "application/json"))
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(SubscribeRequest(appId, list)))
     }
 
     private fun buildUnsubscribeNotifRequest(channelId: String): Request {
-        return Fuel.delete("/notification/$channelId")
+        return manager.request(method = Method.DELETE, path = "/notification/$channelId")
     }
 
     private fun buildGetOpenedChannelRequest(): Request {
-        return Fuel.get("/notification")
+        return manager.request(method = Method.GET, path = "/notification")
     }
 
     private fun buildPostNotification(channelId: String, appId: String, message: String): Request {
-        return Fuel.post("/notification/$channelId")
+        return manager.request(method = Method.POST, path = "/notification/$channelId")
                 .header(mapOf("Content-Type" to "application/json"))
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(NotificationRequest(appId, message)))
     }
@@ -157,7 +162,7 @@ class BboxApiStb(val appId: String, val appSecret: String) {
                         }
                         boxIp = event.service.host.hostAddress
                         boxRestPort = event.service.port
-                        FuelManager.instance.basePath = "http://$boxIp:$boxRestPort/api.bbox.lan/v0"
+                        setBasePath("http://$boxIp:$boxRestPort/api.bbox.lan/v0")
                         handler(StbServiceEvent.SERVICE_FOUND, StbService(event.service.host.hostAddress, event.service.port), null)
                     }
                 },

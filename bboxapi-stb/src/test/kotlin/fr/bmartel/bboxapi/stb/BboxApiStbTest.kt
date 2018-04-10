@@ -1,8 +1,7 @@
 package fr.bmartel.bboxapi.stb
 
-import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.FuelManager
 import com.github.kittinunf.fuel.core.HttpException
+import com.github.kittinunf.fuel.core.Method
 import com.github.kittinunf.result.Result
 import com.google.gson.Gson
 import de.mannodermaus.rxbonjour.BonjourBroadcastConfig
@@ -38,7 +37,7 @@ open class BboxApiStbTest : TestCase() {
             mockServer.start()
             mockServer.setDispatcher(MockDispatcher())
             bboxApi.cloudHost = mockServer.url("").toString().dropLast(n = 1)
-            FuelManager.instance.basePath = "${mockServer.url("").toString().dropLast(n = 1)}/api.bbox.lan/v0"
+            bboxApi.setBasePath("${mockServer.url("").toString().dropLast(n = 1)}/api.bbox.lan/v0")
         }
     }
 
@@ -47,7 +46,7 @@ open class BboxApiStbTest : TestCase() {
         lock = CountDownLatch(1)
         bboxApi.cloudHost = mockServer.url("").toString().dropLast(n = 1)
         bboxApi.boxIp = mockServer.hostName
-        FuelManager.instance.basePath = "${mockServer.url("").toString().dropLast(n = 1)}/api.bbox.lan/v0"
+        bboxApi.setBasePath("${mockServer.url("").toString().dropLast(n = 1)}/api.bbox.lan/v0")
         bboxApi.hasSessionId = false
         bboxApi.tokenValidity = Date().time
         bboxApi.token = ""
@@ -259,7 +258,7 @@ open class BboxApiStbTest : TestCase() {
     fun createCustomRequest() {
         TestUtils.checkCustomResponse<List<Application>>(
                 testcase = this,
-                inputReq = Fuel.get("/applications"),
+                inputReq = bboxApi.manager.request(method = Method.GET, path = "/applications"),
                 expectedException = null,
                 filename = "apps.json",
                 body = bboxApi::createCustomRequest
@@ -270,7 +269,7 @@ open class BboxApiStbTest : TestCase() {
     fun createCustomRequestCb() {
         TestUtils.checkCustomResponseCb<List<Application>>(
                 testcase = this,
-                inputReq = Fuel.get("/applications"),
+                inputReq = bboxApi.manager.request(method = Method.GET, path = "/applications"),
                 expectedException = null,
                 filename = "apps.json",
                 body = bboxApi::createCustomRequest
@@ -280,7 +279,7 @@ open class BboxApiStbTest : TestCase() {
     @Test
     fun createCustomRequestSync() {
         TestUtils.checkCustomResponseSync<List<Application>>(
-                inputReq = Fuel.get("/applications"),
+                inputReq = bboxApi.manager.request(method = Method.GET, path = "/applications"),
                 expectedException = null,
                 filename = "apps.json",
                 body = bboxApi::createCustomRequestSync
@@ -350,25 +349,25 @@ open class BboxApiStbTest : TestCase() {
 
     @Test
     fun noHostGetSessionId() {
-        FuelManager.instance.basePath = "http://testsetsetset/api.bbox.lan/v0"
+        bboxApi.setBasePath("http://testsetsetset/api.bbox.lan/v0")
         TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels, expectedException = UnknownHostException())
     }
 
     @Test
     fun noHostGetSessionIdSync() {
-        FuelManager.instance.basePath = "http://testsetsetset/api.bbox.lan/v0"
+        bboxApi.setBasePath("http://testsetsetset/api.bbox.lan/v0")
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync, expectedException = UnknownHostException())
     }
 
     @Test
     fun notFoundGetSessionId() {
-        FuelManager.instance.basePath = "${mockServer.url("").toString().dropLast(n = 1)}/test/api.bbox.lan/v0"
+        bboxApi.setBasePath("${mockServer.url("").toString().dropLast(n = 1)}/test/api.bbox.lan/v0")
         TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels, expectedException = HttpException(httpCode = 404, httpMessage = "Client Error"))
     }
 
     @Test
     fun notFoundGetSessionIdSync() {
-        FuelManager.instance.basePath = "${mockServer.url("").toString().dropLast(n = 1)}/test/api.bbox.lan/v0"
+        bboxApi.setBasePath("${mockServer.url("").toString().dropLast(n = 1)}/test/api.bbox.lan/v0")
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync, expectedException = HttpException(httpCode = 404, httpMessage = "Client Error"))
     }
 
