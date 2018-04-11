@@ -78,3 +78,7 @@ Also using `startRestDiscovery` :
 
 * setting `findOneAndExit` to `true` will automatically end the discovery when one service is found
 * setting `maxDuration` parameter will set a max duration in milliseconds for service discovery
+
+The last service found is automatically chosen and set in variable `bboxapi.restService`.
+
+The list of services found is available in `bboxapi.restServiceList`. In special environments where there are multiple Bbox Miami or multiple Android TV device with Bbox API STB service installed on the same network, there can be more than one service found if `findOneAndExit` is set to `false`.
