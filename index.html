@@ -358,8 +358,8 @@ with Gradle, from JCenter or MavenCentral :</p>
 <span class="o">}</span>
 
 <span class="n">dependencies</span> <span class="o">{</span>
-    <span class="n">compile</span> <span class="s1">'fr.bmartel:bboxapi-stb:1.0.2'</span> <span class="c1">//for JVM</span>
-    <span class="n">compile</span> <span class="s1">'fr.bmartel:bboxapi-stb-android:1.0.2'</span> <span class="c1">//for Android</span>
+    <span class="n">compile</span> <span class="s1">'fr.bmartel:bboxapi-stb:1.0.3'</span> <span class="c1">//for JVM</span>
+    <span class="n">compile</span> <span class="s1">'fr.bmartel:bboxapi-stb-android:1.0.3'</span> <span class="c1">//for Android</span>
 <span class="o">}</span>
 </code></pre><h2 id='synchronous-amp-asynchronous'>Synchronous &amp; Asynchronous</h2>
 <p>All methods have an asynchronous &amp; synchronous version. The synchronous version is suffixed with <code>Sync</code> :</p>
@@ -460,6 +460,10 @@ with Gradle, from JCenter or MavenCentral :</p>
 <li>setting <code>findOneAndExit</code> to <code>true</code> will automatically end the discovery when one service is found</li>
 <li>setting <code>maxDuration</code> parameter will set a max duration in milliseconds for service discovery</li>
 </ul>
+
+<p>The last service found is automatically chosen and set in variable <code>bboxapi.restService</code>.</p>
+
+<p>The list of services found is available in <code>bboxapi.restServiceList</code>. In special environments where there are multiple Bbox Miami or multiple Android TV device with Bbox API STB service installed on the same network, there can be more than one service found if <code>findOneAndExit</code> is set to <code>false</code>.</p>
 <h1 id='api-reference'>API reference</h1><h2 id='display-toast'>Display Toast</h2>
 <blockquote>
 <p>Asynchronous </p>
