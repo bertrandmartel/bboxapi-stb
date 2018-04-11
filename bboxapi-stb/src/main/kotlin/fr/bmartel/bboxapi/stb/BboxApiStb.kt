@@ -28,8 +28,6 @@ class BboxApiStb(val appId: String, val appSecret: String) {
 
     var cloudHost: String = "https://api.bbox.fr"
 
-    var boxIp: String? = null
-    var boxRestPort: Int? = null
     var boxWebsocketPort: Int = 9090
 
     var tokenValidity: Long = Date().time
@@ -48,6 +46,16 @@ class BboxApiStb(val appId: String, val appSecret: String) {
 
     val manager = FuelManager()
 
+    /**
+     * list of Bbox API STB Rest services found on network.
+     */
+    var restServiceList = mutableListOf<StbService>()
+
+    /**
+     * the selected Bbox API STB Rest service.
+     */
+    var restService: StbService? = null
+
     interface WebSocketListener {
         fun onOpen()
         fun onClose()
@@ -60,6 +68,11 @@ class BboxApiStb(val appId: String, val appSecret: String) {
 
     fun setBasePath(basePath: String) {
         manager.basePath = basePath
+    }
+
+    fun selectRestService(service: StbService) {
+        restService = service
+        setBasePath(basePath = "http://${service.ip}:${service.port}/api.bbox.lan/v0")
     }
 
     private fun buildTokenRequest(): Request {
@@ -153,6 +166,9 @@ class BboxApiStb(val appId: String, val appSecret: String) {
                 .driver(JmDNSDriver.create())
                 .create()
 
+        //empty service list before discovery
+        restServiceList.clear()
+
         val obs = rxBonjour.newDiscovery(type = BBOXAPI_REST_SERVICE_TYPE)
         serviceDiscovery = obs.subscribe(
                 { event ->
@@ -160,10 +176,13 @@ class BboxApiStb(val appId: String, val appSecret: String) {
                         if (findOneAndExit) {
                             stopDiscovery()
                         }
-                        boxIp = event.service.host.hostAddress
-                        boxRestPort = event.service.port
-                        setBasePath("http://$boxIp:$boxRestPort/api.bbox.lan/v0")
-                        handler(StbServiceEvent.SERVICE_FOUND, StbService(event.service.host.hostAddress, event.service.port), null)
+                        val stbService = StbService(event.service.host.hostAddress, event.service.port)
+                        restServiceList.add(stbService)
+                        //the last service found is selected
+                        restService = stbService
+                        selectRestService(stbService)
+
+                        handler(StbServiceEvent.SERVICE_FOUND, stbService, null)
                     }
                 },
                 { error ->
@@ -237,7 +256,7 @@ class BboxApiStb(val appId: String, val appSecret: String) {
 
     fun openWebsocket(listener: okhttp3.WebSocketListener) {
         httpClient = OkHttpClient()
-        websocket = httpClient.newWebSocket(okhttp3.Request.Builder().url("ws://$boxIp:$boxWebsocketPort").build(), listener)
+        websocket = httpClient.newWebSocket(okhttp3.Request.Builder().url("ws://${restService?.ip}:$boxWebsocketPort").build(), listener)
     }
 
     fun closeWebsocket() {

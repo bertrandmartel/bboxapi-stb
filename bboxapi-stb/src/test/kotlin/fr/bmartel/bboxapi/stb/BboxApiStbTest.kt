@@ -45,7 +45,7 @@ open class BboxApiStbTest : TestCase() {
     fun setUp() {
         lock = CountDownLatch(1)
         bboxApi.cloudHost = mockServer.url("").toString().dropLast(n = 1)
-        bboxApi.boxIp = mockServer.hostName
+        bboxApi.restService = StbService(mockServer.hostName, mockServer.port)
         bboxApi.setBasePath("${mockServer.url("").toString().dropLast(n = 1)}/api.bbox.lan/v0")
         bboxApi.hasSessionId = false
         bboxApi.tokenValidity = Date().time
@@ -517,6 +517,12 @@ open class BboxApiStbTest : TestCase() {
             Assert.assertEquals(service?.port, 13337)
             Assert.assertEquals(service?.ip, "127.0.0.1")
             found = true
+            Assert.assertEquals(1, bboxApi.restServiceList.size)
+            Assert.assertEquals(13337, bboxApi.restServiceList[0].port)
+            Assert.assertEquals("127.0.0.1", bboxApi.restServiceList[0].ip)
+            Assert.assertNotNull(bboxApi.restService)
+            Assert.assertEquals(13337, bboxApi.restService?.port)
+            Assert.assertEquals("127.0.0.1", bboxApi.restService?.ip)
             lock.countDown()
         }
         lock.await()

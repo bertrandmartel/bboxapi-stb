@@ -17,7 +17,7 @@ buildscript {
         mockitoKotlinVersion = '1.5.0'
         dokkaVersion = '0.9.16'
 
-        projectVersion = '1.0.2'
+        projectVersion = '1.0.3'
         projectDescription = 'Bbox Miami API library for Kotlin/Java/Android'
         projectSite = 'https://github.com/bertrandmartel/bboxapi-stb'
         projectRepo = 'https://github.com/bertrandmartel/bboxapi-stb.git'
