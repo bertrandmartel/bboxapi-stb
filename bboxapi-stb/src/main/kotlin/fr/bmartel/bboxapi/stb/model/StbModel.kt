@@ -32,7 +32,7 @@ data class Application(
 data class Media(val mediaService: String, val mediaState: String, val mediaTitle: String, val positionId: String)
 data class Volume(val volume: String)
 
-data class MediaEvent(val mediaService: String, val mediaState: String, val mediaTitle: String, val positionId: Int)
+data class MediaEvent(val mediaService: String, val mediaState: String, val mediaTitle: String, val positionId: Int, val epgChannelNumber: Int)
 data class AppEvent(val packageName: String, val state: String)
 data class MessageEvent(val message: String, val source: String)
 

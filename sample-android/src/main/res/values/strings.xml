@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">BboxAPI STB sample app</string>
+    <string name="stb_rest_service_dialog_title">Liste des services Rest BboxAPI STB</string>
+    <string name="stb_ws_service_dialog_title">Liste des services Websocket BboxAPI STB</string>
+    <string name="app_id">YOUR_APP_ID</string>
+    <string name="app_secret">YOUR_APP_SECRET</string>
+</resources>

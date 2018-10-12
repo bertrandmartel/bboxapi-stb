@@ -4,23 +4,22 @@ import com.github.kittinunf.fuel.core.*
 import com.github.kittinunf.fuel.gson.gsonDeserializerOf
 import com.github.kittinunf.result.Result
 import com.github.kittinunf.result.flatMapError
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonParser
-import com.google.gson.JsonSyntaxException
+import com.google.gson.*
 import de.mannodermaus.rxbonjour.Platform
 import de.mannodermaus.rxbonjour.RxBonjour
 import de.mannodermaus.rxbonjour.drivers.jmdns.JmDNSDriver
 import fr.bmartel.bboxapi.stb.model.*
+import fr.bmartel.bboxapi.stb.utils.NetworkUtils
 import io.reactivex.disposables.Disposable
 import okhttp3.OkHttpClient
 import okhttp3.WebSocket
 import java.util.*
 import kotlin.concurrent.schedule
 
-
 const val BBOXAPI_REST_SERVICE_TYPE = "_http._tcp"
 const val BBOXAPI_REST_SERVICE_NAME = "Bboxapi"
+const val BBOXAPI_WS_SERVICE_TYPE = "_ws._tcp"
+const val BBOXAPI_WS_SERVICE_NAME = "Bboxapi"
 
 class BboxApiStb(val appId: String, val appSecret: String) {
 
@@ -28,17 +27,17 @@ class BboxApiStb(val appId: String, val appSecret: String) {
 
     var cloudHost: String = "https://api.bbox.fr"
 
-    var boxWebsocketPort: Int = 9090
-
     var tokenValidity: Long = Date().time
     var token: String = ""
 
     var sessionIdValidity: Long = Date().time
     var sessionId: String = ""
 
-    var serviceDiscovery: Disposable? = null
+    var serviceRestDiscovery: Disposable? = null
+    var serviceWsDiscovery: Disposable? = null
 
-    var discoveryTimer: Timer? = null
+    var discoveryRestTimer: Timer? = null
+    var discoveryWsTimer: Timer? = null
 
     var httpClient = OkHttpClient()
 
@@ -46,24 +45,33 @@ class BboxApiStb(val appId: String, val appSecret: String) {
 
     val manager = FuelManager()
 
+    var discoveringRest = false
+    var discoveringWs = false
+
+    var preferredIp: String? = null
+    var preferredPort: Int? = null
     /**
      * list of Bbox API STB Rest services found on network.
      */
     var restServiceList = mutableListOf<StbService>()
 
     /**
+     * list of Bbox API STB Websocket services found on network.
+     */
+    var wsServiceList = mutableListOf<StbService>()
+
+    /**
      * the selected Bbox API STB Rest service.
      */
     var restService: StbService? = null
 
-    interface WebSocketListener {
-        fun onOpen()
-        fun onClose()
-        fun onError(error: BboxApiError)
-        fun onMedia(media: MediaEvent)
-        fun onApp(app: AppEvent)
-        fun onMessage(message: MessageEvent)
-        fun onFailure(throwable: Throwable?)
+    /**
+     * the selected Bbox API STB Websocket service.
+     */
+    var wsService: StbService? = null
+
+    init {
+        manager.basePath = "http://localhost"
     }
 
     fun setBasePath(basePath: String) {
@@ -73,6 +81,10 @@ class BboxApiStb(val appId: String, val appSecret: String) {
     fun selectRestService(service: StbService) {
         restService = service
         setBasePath(basePath = "http://${service.ip}:${service.port}/api.bbox.lan/v0")
+    }
+
+    fun selectWsService(service: StbService) {
+        wsService = service
     }
 
     private fun buildTokenRequest(): Request {
@@ -160,46 +172,235 @@ class BboxApiStb(val appId: String, val appSecret: String) {
     /**
      * discover Bbox API Rest service.
      */
-    fun startRestDiscovery(findOneAndExit: Boolean = false, platform: Platform, maxDuration: Int = 0, handler: (StbServiceEvent, StbService?, Throwable?) -> Unit) {
-        val rxBonjour = RxBonjour.Builder()
-                .platform(platform)
-                .driver(JmDNSDriver.create())
-                .create()
+    fun startRestDiscovery(findOneAndExit: Boolean = false, platform: Platform, maxDuration: Int = 0, handler: (StbServiceEvent, StbService?, Boolean, Throwable?) -> Unit): Boolean {
+        if (!discoveringRest) {
+            discoveringRest = true
+            val rxBonjour = RxBonjour.Builder()
+                    .platform(platform)
+                    .driver(JmDNSDriver.create())
+                    .create()
 
-        //empty service list before discovery
-        restServiceList.clear()
+            //empty service list before discovery
+            restServiceList.clear()
+            restService = null
+            wsService = null
+            val obs = rxBonjour.newDiscovery(type = BBOXAPI_REST_SERVICE_TYPE)
+            serviceRestDiscovery = obs.subscribe(
+                    { event ->
+                        if (event.service.name.startsWith(BBOXAPI_REST_SERVICE_NAME)) {
+                            if (findOneAndExit) {
+                                stopDiscoveryRest()
+                            }
+                            val stbService = StbService(event.service.host.hostAddress, event.service.port)
+                            restServiceList.add(stbService)
+                            val changed = chooseRestService(stbService)
 
-        val obs = rxBonjour.newDiscovery(type = BBOXAPI_REST_SERVICE_TYPE)
-        serviceDiscovery = obs.subscribe(
-                { event ->
-                    if (event.service.name.startsWith(BBOXAPI_REST_SERVICE_NAME)) {
-                        if (findOneAndExit) {
-                            stopDiscovery()
+                            handler(StbServiceEvent.SERVICE_FOUND, stbService, changed, null)
                         }
-                        val stbService = StbService(event.service.host.hostAddress, event.service.port)
-                        restServiceList.add(stbService)
-                        //the last service found is selected
-                        restService = stbService
-                        selectRestService(stbService)
-
-                        handler(StbServiceEvent.SERVICE_FOUND, stbService, null)
-                    }
-                },
-                { error ->
-                    handler(StbServiceEvent.DISCOVERY_ERROR, null, error)
-                })
-        if (maxDuration > 0) {
-            discoveryTimer = Timer()
-            discoveryTimer?.schedule(delay = maxDuration.toLong()) {
-                stopDiscovery()
-                handler(StbServiceEvent.DISCOVERY_STOPPED, null, null)
-                discoveryTimer?.cancel()
+                    },
+                    { error ->
+                        discoveringRest = false
+                        handler(StbServiceEvent.DISCOVERY_ERROR, null, false, error)
+                    })
+            if (maxDuration > 0) {
+                discoveryRestTimer = Timer()
+                discoveryRestTimer?.schedule(delay = maxDuration.toLong()) {
+                    stopDiscoveryRest()
+                    handler(StbServiceEvent.DISCOVERY_STOPPED, null, false, null)
+                    discoveryRestTimer?.cancel()
+                }
             }
+            return true
         }
+        return false
     }
 
-    fun subscribeNotification(appName: String, resourceList: List<Resource>, listener: WebSocketListener): NotificationChannel {
+    private fun chooseRestService(stbService: StbService): Boolean {
+        val currentIp = NetworkUtils.getIPAddress(true)
+        var ipFound = false
+        val restPreferredIp = mutableListOf<StbService>()
+        val restCurrentIp = mutableListOf<StbService>()
+        var changed = false
+        for (service in restServiceList) {
+            if (service.ip == currentIp) {
+                ipFound = true
+                restCurrentIp.add(service)
+            }
+        }
+        if (preferredIp != null && preferredIp != "" && preferredPort != null) {
+            var ipPreferred = false
+            for (service in restServiceList) {
+                if (service.ip == preferredIp && service.port == preferredPort) {
+                    ipPreferred = true
+                    restPreferredIp.add(service)
+                }
+            }
+            when {
+                ipPreferred -> {
+                    for (service in restPreferredIp) {
+                        if (service.port == 8080) {
+                            selectRestService(service)
+                            return true
+                        }
+                    }
+                    for (service in restPreferredIp) {
+                        if (service.port != 8080) {
+                            selectRestService(service)
+                            return true
+                        }
+                    }
+                }
+                ipFound -> {
+                    for (service in restCurrentIp) {
+                        if (service.port == 8080) {
+                            selectRestService(service)
+                            return true
+                        }
+                    }
+                    for (service in restCurrentIp) {
+                        if (service.port != 8080) {
+                            selectRestService(service)
+                            return true
+                        }
+                    }
+                }
+                restService == null -> {
+                    selectRestService(stbService)
+                    changed = true
+                }
+            }
+        } else {
+            when {
+                ipFound -> {
+                    for (service in restCurrentIp) {
+                        if (service.port == 8080) {
+                            selectRestService(service)
+                            return true
+                        }
+                    }
+                    for (service in restCurrentIp) {
+                        if (service.port != 8080) {
+                            selectRestService(service)
+                            return true
+                        }
+                    }
+                }
+                restService == null -> {
+                    selectRestService(stbService)
+                    changed = true
+                }
+            }
+        }
+        return changed
+    }
+
+    private fun chooseWsService(stbService: StbService): Boolean {
+        val currentIp = NetworkUtils.getIPAddress(true)
+        var ipFound = false
+        var wsCurrentIp: StbService? = null
+        var changed = false
+        for (service in wsServiceList) {
+            if (service.ip == currentIp) {
+                ipFound = true
+                wsCurrentIp = service
+            }
+        }
+        if (preferredIp != null) {
+            var ipPreferred = false
+            var wsIpPreferred: StbService? = null
+            for (service in wsServiceList) {
+                if (service.ip == preferredIp) {
+                    ipPreferred = true
+                    wsIpPreferred = service
+                }
+            }
+            when {
+                ipPreferred -> {
+                    selectWsService(wsIpPreferred!!)
+                    changed = true
+                }
+                ipFound -> {
+                    selectWsService(wsCurrentIp!!)
+                    changed = true
+                }
+                wsService == null -> {
+                    selectWsService(stbService)
+                    changed = true
+                }
+            }
+        } else {
+            when {
+                ipFound -> {
+                    selectWsService(wsCurrentIp!!)
+                    changed = true
+                }
+                wsService == null -> {
+                    selectWsService(stbService)
+                    changed = true
+                }
+            }
+        }
+        return changed
+    }
+
+    /**
+     * discover Bbox API Rest service.
+     */
+    fun startWebsocketDiscovery(findOneAndExit: Boolean = false, platform: Platform, maxDuration: Int = 0, handler: (StbServiceEvent, StbService?, Boolean, Throwable?) -> Unit): Boolean {
+        if (!discoveringWs) {
+            discoveringWs = true
+            val rxBonjour = RxBonjour.Builder()
+                    .platform(platform)
+                    .driver(JmDNSDriver.create())
+                    .create()
+
+            //empty service list before discovery
+            wsServiceList.clear()
+
+            val obs = rxBonjour.newDiscovery(type = BBOXAPI_WS_SERVICE_TYPE)
+            serviceWsDiscovery = obs.subscribe(
+                    { event ->
+                        if (event.service.name.startsWith(BBOXAPI_WS_SERVICE_NAME)) {
+                            if (findOneAndExit) {
+                                stopDiscoveryWs()
+                            }
+                            val stbService = StbService(event.service.host.hostAddress, event.service.port)
+                            wsServiceList.add(stbService)
+                            val changed = chooseWsService(stbService)
+
+                            handler(StbServiceEvent.SERVICE_FOUND, stbService, changed, null)
+                        }
+                    },
+                    { error ->
+                        discoveringWs = false
+                        handler(StbServiceEvent.DISCOVERY_ERROR, null, false, error)
+                    })
+            if (maxDuration > 0) {
+                discoveryWsTimer = Timer()
+                discoveryWsTimer?.schedule(delay = maxDuration.toLong()) {
+                    stopDiscoveryWs()
+                    handler(StbServiceEvent.DISCOVERY_STOPPED, null, false, null)
+                    discoveryWsTimer?.cancel()
+                }
+            }
+            return true
+        }
+        return false
+    }
+
+    fun subscribeNotification(appName: String, resourceList: List<Resource>, listener: IWebsocketListener): NotificationChannel? {
         closeWebsocket()
+        if (restService == null) {
+            return null
+        }
+        var port = 9090
+        var ip = restService?.ip!!
+        if (restService != null && restService!!.port != 8080 && wsService == null) {
+            return null
+        } else if (restService != null && restService!!.port != 8080) {
+            port = wsService?.port!!
+            ip = wsService?.ip!!
+        }
         val registerRes = registerAppSync(appName)
         if (registerRes.third is Result.Failure) {
             return NotificationChannel(null, null, registerRes)
@@ -215,7 +416,7 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         val locationSubscribe = subscribeRes.second.headers["Location"]?.get(0) ?: ""
         val channelId = locationSubscribe.substring(locationSubscribe.lastIndexOf('/') + 1)
 
-        openWebsocket(object : okhttp3.WebSocketListener() {
+        openWebsocket(ip, port, object : okhttp3.WebSocketListener() {
             override fun onOpen(webSocket: WebSocket?, response: okhttp3.Response?) {
                 webSocket?.send(appId)
                 listener.onOpen()
@@ -233,7 +434,7 @@ class BboxApiStb(val appId: String, val appSecret: String) {
                             data.has("error") -> listener.onError(Gson().fromJson(text, BboxApiError::class.java))
                             data.has("resourceId") -> {
                                 when {
-                                    data.get("resourceId").asString == "Media" -> listener.onMedia(Gson().fromJson(data.getAsJsonObject("body"), MediaEvent::class.java))
+                                    data.get("resourceId").asString == "Media" -> listener.onMedia(Gson().fromJson(data.get("body").asString, MediaEvent::class.java))
                                     data.get("resourceId").asString == "Application" -> listener.onApp(Gson().fromJson(data.getAsJsonObject("body"), AppEvent::class.java))
                                     data.get("resourceId").asString == "Message" -> listener.onMessage(Gson().fromJson(data.getAsJsonObject("body"), MessageEvent::class.java))
                                     else -> listener.onError(BboxApiError("can't parse event : $text"))
@@ -242,6 +443,10 @@ class BboxApiStb(val appId: String, val appSecret: String) {
                             else -> listener.onError(BboxApiError("can't parse event : $text"))
                         }
                     } catch (e: JsonSyntaxException) {
+                        listener.onError(BboxApiError("can't parse event : $text"))
+                    } catch (e: ClassCastException) {
+                        listener.onError(BboxApiError("can't parse event : $text"))
+                    } catch (e: UnsupportedOperationException) {
                         listener.onError(BboxApiError("can't parse event : $text"))
                     }
                 }
@@ -254,9 +459,9 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         return NotificationChannel(appId, channelId, registerRes)
     }
 
-    fun openWebsocket(listener: okhttp3.WebSocketListener) {
+    fun openWebsocket(ip: String, port: Int, listener: okhttp3.WebSocketListener) {
         httpClient = OkHttpClient()
-        websocket = httpClient.newWebSocket(okhttp3.Request.Builder().url("ws://${restService?.ip}:$boxWebsocketPort").build(), listener)
+        websocket = httpClient.newWebSocket(okhttp3.Request.Builder().url("ws://$ip:$port").build(), listener)
     }
 
     fun closeWebsocket() {
@@ -265,16 +470,25 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         httpClient.connectionPool().evictAll()
     }
 
-    fun stopDiscovery() {
-        if (serviceDiscovery?.isDisposed == false) {
-            serviceDiscovery?.dispose()
-            discoveryTimer?.cancel()
+    fun stopDiscoveryRest() {
+        discoveringRest = false
+        if (serviceRestDiscovery?.isDisposed == false) {
+            serviceRestDiscovery?.dispose()
+            discoveryRestTimer?.cancel()
+        }
+    }
+
+    fun stopDiscoveryWs() {
+        discoveringWs = false
+        if (serviceWsDiscovery?.isDisposed == false) {
+            serviceWsDiscovery?.dispose()
+            discoveryWsTimer?.cancel()
         }
     }
 
     private fun getTokenAndExecute(handler: Handler<String>) {
         buildTokenRequest().responseString { req, res, result ->
-            result.fold({ it ->
+            result.fold({ _ ->
                 token = res.headers["x-token"]?.get(0) ?: ""
                 tokenValidity = res.headers["x-token-validity"]?.get(0)?.toLong() ?: Date().time
                 //now call session id request
@@ -606,10 +820,17 @@ class BboxApiStb(val appId: String, val appSecret: String) {
 
     fun unsubscribeAllSync(): Triple<Request, Response, Result<List<String>, FuelError>> {
         val (_, _, channelsRes) = getOpenedChannelsSync()
-        //for some reason it returns duplicates (!?)
-        for (it in channelsRes.get().distinct()) {
-            unsubscribeSync(channelId = it)
+        when (channelsRes) {
+            is Result.Failure -> {
+                throw channelsRes.getException().exception
+            }
+            is Result.Success -> {
+                for (it in channelsRes.get().distinct()) {
+                    unsubscribeSync(channelId = it)
+                }
+            }
         }
+        //for some reason it returns duplicates (!?)
         return getOpenedChannelsSync()
     }
 

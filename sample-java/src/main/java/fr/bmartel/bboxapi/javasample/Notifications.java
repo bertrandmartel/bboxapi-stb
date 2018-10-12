@@ -5,11 +5,14 @@ import com.github.kittinunf.fuel.core.Handler;
 import com.github.kittinunf.fuel.core.Request;
 import com.github.kittinunf.fuel.core.Response;
 import com.github.kittinunf.result.Result;
+
 import de.mannodermaus.rxbonjour.platforms.desktop.DesktopPlatform;
 import fr.bmartel.bboxapi.stb.BboxApiStb;
+import fr.bmartel.bboxapi.stb.IWebsocketListener;
 import fr.bmartel.bboxapi.stb.model.*;
 import kotlin.Triple;
 import kotlin.Unit;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,13 +26,13 @@ public class Notifications {
     public static void main(String args[]) {
         BboxApiStb bboxapi = new BboxApiStb("YourAppId", "YourAppSecret");
 
-        bboxapi.startRestDiscovery(true, DesktopPlatform.create(), 10000, (stbServiceEvent, stbService, throwable) -> {
+        bboxapi.startRestDiscovery(true, DesktopPlatform.create(), 25000, (stbServiceEvent, stbService, changed, throwable) -> {
             switch (stbServiceEvent) {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
 
                     //unsubscribe all channels
-                    bboxapi.unsubscribeAllSync();
+                    System.out.println(bboxapi.unsubscribeAllSync());
 
                     List<Resource> resourceList = new ArrayList<>();
                     resourceList.add(Resource.Application);
@@ -39,7 +42,7 @@ public class Notifications {
                     NotificationChannel notificationChannel = bboxapi.subscribeNotification(
                             "myApplication",
                             resourceList,
-                            new BboxApiStb.WebSocketListener() {
+                            new IWebsocketListener() {
                                 @Override
                                 public void onOpen() {
                                     System.out.println("websocket opened");

@@ -9,7 +9,7 @@ import fr.bmartel.bboxapi.stb.model.ToastRequest
 fun main(args: Array<String>) {
     val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret")
 
-    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, service, error ->
+    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, service, changed, error ->
         when (eventType) {
             StbServiceEvent.SERVICE_FOUND -> {
                 println("service found : ${service?.ip}:${service?.port}")

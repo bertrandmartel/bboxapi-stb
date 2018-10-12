@@ -16,7 +16,7 @@ public class DisplayToast {
     public static void main(String args[]) {
         BboxApiStb bboxapi = new BboxApiStb("YourAppId", "YourAppSecret");
 
-        bboxapi.startRestDiscovery(true, DesktopPlatform.create(), 10000, (stbServiceEvent, stbService, throwable) -> {
+        bboxapi.startRestDiscovery(true, DesktopPlatform.create(), 10000, (stbServiceEvent, stbService, changed, throwable) -> {
             switch (stbServiceEvent) {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());

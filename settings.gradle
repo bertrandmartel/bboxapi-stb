@@ -1,1 +1,1 @@
-include ':bboxapi-stb',':sample',':sample-java', ':bboxapi-stb-android'
+include ':bboxapi-stb',':sample',':sample-java', ':bboxapi-stb-android',':sample-android'

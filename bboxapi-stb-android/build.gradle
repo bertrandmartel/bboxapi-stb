@@ -34,6 +34,7 @@ android {
     lintOptions {
         abortOnError false
     }
+    buildToolsVersion '28.0.2'
 }
 
 dependencies {
@@ -41,7 +42,7 @@ dependencies {
     implementation "com.google.code.gson:gson:$gsonVersion"
     implementation "de.mannodermaus.rxjava2:rxbonjour-platform-android:2.0.0-RC1"
 
-    compile(project(':bboxapi-stb')) {
+    implementation(project(':bboxapi-stb')) {
         exclude group: 'com.github.kittinunf.fuel'
         exclude module: 'rxbonjour-platform-desktop'
     }

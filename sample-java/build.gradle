@@ -1,7 +1,15 @@
 apply plugin: 'java'
 
 dependencies {
-    compile project(':bboxapi-stb')
+    implementation project(':bboxapi-stb')
     implementation "de.mannodermaus.rxjava2:rxbonjour-platform-desktop:2.0.0-RC1"
+    implementation "de.mannodermaus.rxjava2:rxbonjour-driver-jmdns:2.0.0-RC1"
     implementation "com.github.kittinunf.fuel:fuel-gson:$fuelGsonVersion"
+}
+
+task notifications(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    classpath += sourceSets.main.resources
+    main = "fr.bmartel.bboxapi.javasample.Notifications"
+    args ""
 }
