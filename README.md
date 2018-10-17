@@ -16,7 +16,7 @@
 ### MDNS
 
 - [x] discover Rest API service
-- [ ] discover Websocket API service (only for next version)
+- [x] discover Websocket API service (only for next version)
 
 ### REST
 
