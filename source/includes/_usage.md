@@ -11,8 +11,8 @@ repositories {
 }
 
 dependencies {
-    compile 'fr.bmartel:bboxapi-stb:1.0.3' //for JVM
-    compile 'fr.bmartel:bboxapi-stb-android:1.0.3' //for Android
+    compile 'fr.bmartel:bboxapi-stb:1.1.10' //for JVM
+    compile 'fr.bmartel:bboxapi-stb-android:1.1.10' //for Android
 }
 ```
 
