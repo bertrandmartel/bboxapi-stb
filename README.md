@@ -1,6 +1,6 @@
 # BboxApi STB client library #
 
-[![CircleCI](https://img.shields.io/circleci/project/bertrandmartel/bboxapi-stb.svg?maxAge=2592000?style=plastic)](https://circleci.com/gh/bertrandmartel/bboxapi-stb)
+[![Build Status](https://travis-ci.org/bertrandmartel/bboxapi-stb.svg?branch=master)](https://travis-ci.org/bertrandmartel/bboxapi-stb)
 [![Download](https://api.bintray.com/packages/bertrandmartel/maven/bboxapi-stb/images/download.svg) ](https://bintray.com/bertrandmartel/maven/bboxapi-stb/_latestVersion)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/fr.bmartel/bboxapi-stb/badge.svg)](https://maven-badges.herokuapp.com/maven-central/fr.bmartel/bboxapi-stb)
 [![Javadoc](http://javadoc-badge.appspot.com/fr.bmartel/bboxapi-stb.svg?label=javadoc)](http://javadoc-badge.appspot.com/fr.bmartel/bboxapi-stb)
