@@ -1,10 +1,12 @@
 package fr.bmartel.bboxapi.stb
 
 import com.github.kittinunf.fuel.core.*
-import com.github.kittinunf.fuel.gson.gsonDeserializerOf
+import com.github.kittinunf.fuel.gson.gsonDeserializer
 import com.github.kittinunf.result.Result
-import com.github.kittinunf.result.flatMapError
-import com.google.gson.*
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonParser
+import com.google.gson.JsonSyntaxException
 import de.mannodermaus.rxbonjour.Platform
 import de.mannodermaus.rxbonjour.RxBonjour
 import de.mannodermaus.rxbonjour.drivers.jmdns.JmDNSDriver
@@ -97,6 +99,28 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         return manager.request(method = Method.POST, path = "/security/sessionId")
                 .header(mapOf("Content-Type" to "application/json"))
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(SessionIdRequest(token = token)))
+    }
+
+    private fun buildVodRequest(page: Int, limit: Int, parentalGuidance: ParentalGuidance, mode: VodMode): Request {
+        return manager.request(
+                method = Method.GET,
+                path = "$cloudHost/v1.3/media/vod?page=$page&limit=$limit&parentalGuidance=${parentalGuidance.guidance}&mode=${mode.mode}"
+        )
+    }
+
+
+    private fun buildEpgRequest(page: Int, limit: Int, period: Int, mode: EpgMode, startTime: String? = null, endTime: String? = null): Request {
+        var request = "$cloudHost/v1.3/media/live?page=$page&limit=$limit&period=$period&mode=${mode.mode}"
+        if (startTime != null) {
+            request = "$request&startTime=$startTime"
+        }
+        if (endTime != null) {
+            request = "$request&startTime=$endTime"
+        }
+        return manager.request(
+                method = Method.GET,
+                path = request
+        )
     }
 
     private fun buildChannelListRequest(): Request {
@@ -406,14 +430,14 @@ class BboxApiStb(val appId: String, val appSecret: String) {
             return NotificationChannel(null, null, registerRes)
         }
 
-        val location = registerRes.second.headers["Location"]?.get(0) ?: ""
+        val location = registerRes.second.headers["Location"].elementAt(0)
         val appId = location.substring(location.lastIndexOf('/') + 1)
 
         val subscribeRes = processSessionIdSync<ByteArray>(request = buildSubscribeNotifRequest(appId, resourceList), json = false)
         if (subscribeRes.third is Result.Failure) {
             return NotificationChannel(null, null, subscribeRes)
         }
-        val locationSubscribe = subscribeRes.second.headers["Location"]?.get(0) ?: ""
+        val locationSubscribe = subscribeRes.second.headers["Location"].elementAt(0)
         val channelId = locationSubscribe.substring(locationSubscribe.lastIndexOf('/') + 1)
 
         openWebsocket(ip, port, object : okhttp3.WebSocketListener() {
@@ -487,20 +511,32 @@ class BboxApiStb(val appId: String, val appSecret: String) {
     }
 
     private fun getTokenAndExecute(handler: Handler<String>) {
-        buildTokenRequest().responseString { req, res, result ->
+        buildTokenRequest().responseString { _, res, result ->
             result.fold({ _ ->
-                token = res.headers["x-token"]?.get(0) ?: ""
-                tokenValidity = res.headers["x-token-validity"]?.get(0)?.toLong() ?: Date().time
+                token = res.headers["x-token"].elementAt(0)
+                tokenValidity = res.headers["x-token-validity"].elementAt(0).toLong()
                 //now call session id request
-                buildSessionIdRequest(token).responseString { req2, res2, result2 ->
+                buildSessionIdRequest(token).responseString { _, _, result2 ->
                     result2.fold({ _ ->
-                        handler.success(req2, res2, result2.get())
+                        handler.success(result2.get())
                     }, { err2 ->
-                        handler.failure(req2, res2, err2)
+                        handler.failure(err2)
                     })
                 }
             }, { err ->
-                handler.failure(req, res, err)
+                handler.failure(err)
+            })
+        }
+    }
+
+    private fun getTokenCloudAndExecute(handler: Handler<String>) {
+        buildTokenRequest().responseString { _, res, result ->
+            result.fold({ _ ->
+                token = res.headers["x-token"].elementAt(0)
+                tokenValidity = res.headers["x-token-validity"].elementAt(0).toLong()
+                handler.success(result.get())
+            }, { err ->
+                handler.failure(err)
             })
         }
     }
@@ -508,22 +544,30 @@ class BboxApiStb(val appId: String, val appSecret: String) {
     private fun getTokenAndExecuteSync(): Triple<Request, Response, Result<String, FuelError>> {
         val triple = buildTokenRequest().responseString()
         if (triple.third is Result.Success) {
-            token = triple.second.headers["x-token"]?.get(0) ?: ""
-            tokenValidity = triple.second.headers["x-token-validity"]?.get(0)?.toLong() ?: Date().time
+            token = triple.second.headers["x-token"].elementAt(0)
+            tokenValidity = triple.second.headers["x-token-validity"].elementAt(0).toLong()
             return buildSessionIdRequest(token).responseString()
         }
         return triple
+    }
+
+    private fun getTokenCloudAndExecuteSync() {
+        val triple = buildTokenRequest().responseString()
+        if (triple.third is Result.Success) {
+            token = triple.second.headers["x-token"].elementAt(0)
+            tokenValidity = triple.second.headers["x-token-validity"].elementAt(0).toLong()
+        }
     }
 
     private fun processToken(handler: Handler<String>) {
         if (tokenValidity < Date().time) {
             getTokenAndExecute(handler = handler)
         } else {
-            buildSessionIdRequest(token).responseString { req, res, result ->
+            buildSessionIdRequest(token).responseString { _, res, result ->
                 if (res.statusCode == 401) {
                     getTokenAndExecute(handler = handler)
                 } else {
-                    handler.success(req, res, result.get())
+                    handler.success(result.get())
                 }
             }
         }
@@ -542,104 +586,12 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         }
     }
 
-    private inline fun <reified T : Any> getSessionIdAndExecute(request: Request, noinline handler: (Request, Response, Result<T, FuelError>) -> Unit, json: Boolean = true) {
-        val tokenHandler: Handler<String> = object : Handler<String> {
-            override fun failure(req: Request, res: Response, error: FuelError) {
-                handler(req, res, Result.error(Exception("failure")).flatMapError {
-                    Result.error(FuelError(error.exception))
-                })
-            }
-
-            override fun success(req: Request, res: Response, value: String) {
-                sessionId = res.headers["x-sessionid"]?.get(0) ?: ""
-                val cal = Calendar.getInstance()
-                cal.add(Calendar.HOUR_OF_DAY, 1)
-                sessionIdValidity = cal.time.time
-                if (json) {
-                    request.header(mapOf("x-sessionid" to sessionId)).responseObject(deserializer = gsonDeserializerOf(), handler = handler)
-                } else {
-                    request.header(mapOf("x-sessionid" to sessionId)).response(handler = handler as (Request, Response, Result<*, FuelError>) -> Unit)
-                }
-            }
-        }
-        processToken(handler = tokenHandler)
-    }
-
-    private inline fun <reified T : Any> getSessionIdAndExecute(request: Request, handler: Handler<T>, json: Boolean = true) {
-        val tokenHandler: Handler<String> = object : Handler<String> {
-            override fun failure(req: Request, res: Response, error: FuelError) {
-                handler.failure(req, res, error)
-            }
-
-            override fun success(req: Request, res: Response, value: String) {
-                sessionId = res.headers["x-sessionid"]?.get(0) ?: ""
-                val cal = Calendar.getInstance()
-                cal.add(Calendar.HOUR_OF_DAY, 1)
-                sessionIdValidity = cal.time.time
-                if (json) {
-                    request.header(mapOf("x-sessionid" to sessionId)).responseObject(deserializer = gsonDeserializerOf(), handler = handler)
-                } else {
-                    request.header(mapOf("x-sessionid" to sessionId)).response(handler = handler as Handler<ByteArray>)
-                }
-            }
-        }
-        processToken(handler = tokenHandler)
-    }
-
-    private inline fun <reified T : Any> processSessionId(request: Request, noinline handler: (Request, Response, Result<T, FuelError>) -> Unit, json: Boolean = true) {
-        if (sessionIdValidity < Date().time) {
-            getSessionIdAndExecute(request = request, handler = handler, json = json)
-        } else {
-            if (json) {
-                request.header(mapOf("x-sessionid" to sessionId)).responseObject<T>(deserializer = gsonDeserializerOf()) { req, res, result ->
-                    if (res.statusCode == 401) {
-                        getSessionIdAndExecute(request = request, handler = handler, json = json)
-                    } else {
-                        handler(req, res, result)
-                    }
-                }
-            } else {
-                request.header(mapOf("x-sessionid" to sessionId)).response { req, res, result ->
-                    if (res.statusCode == 401) {
-                        getSessionIdAndExecute(request = request, handler = handler, json = json)
-                    } else {
-                        handler(req, res, result as Result<T, FuelError>)
-                    }
-                }
-            }
-        }
-    }
-
-    private inline fun <reified T : Any> processSessionId(request: Request, handler: Handler<T>, json: Boolean = true) {
-        if (sessionIdValidity < Date().time) {
-            getSessionIdAndExecute(request = request, handler = handler, json = json)
-        } else {
-            if (json) {
-                request.header(pairs = *arrayOf("x-sessionid" to sessionId)).responseObject<T>(deserializer = gsonDeserializerOf()) { req, res, result ->
-                    if (res.statusCode == 401) {
-                        getSessionIdAndExecute(request = request, handler = handler, json = json)
-                    } else {
-                        handler.success(req, res, result.get())
-                    }
-                }
-            } else {
-                request.header(pairs = *arrayOf("x-sessionid" to sessionId)).response { req, res, result ->
-                    if (res.statusCode == 401) {
-                        getSessionIdAndExecute(request = request, handler = handler, json = json)
-                    } else {
-                        handler.success(req, res, result.get() as T)
-                    }
-                }
-            }
-        }
-    }
-
     private inline fun <reified T : Any> processSessionIdSync(request: Request, json: Boolean = true): Triple<Request, Response, Result<T, FuelError>> {
         if (sessionIdValidity < Date().time) {
             return getSessionIdAndExecuteSync(request = request, json = json)
         } else {
             if (json) {
-                val triple = request.header(mapOf("x-sessionid" to sessionId)).responseObject<T>(gsonDeserializerOf())
+                val triple = request.header(mapOf("x-sessionid" to sessionId)).responseObject<T>(gsonDeserializer())
                 return if (triple.second.statusCode == 401) {
                     getSessionIdAndExecuteSync(request = request, json = json)
                 } else {
@@ -660,12 +612,12 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         val triple = processTokenSync()
 
         if (triple.third is Result.Success) {
-            sessionId = triple.second.headers["x-sessionid"]?.get(0) ?: ""
+            sessionId = triple.second.headers["x-sessionid"].elementAt(0)
             val cal = Calendar.getInstance()
             cal.add(Calendar.HOUR_OF_DAY, 1)
             sessionIdValidity = cal.time.time
             return if (json) {
-                request.header(mapOf("x-sessionid" to sessionId)).responseObject(gsonDeserializerOf())
+                request.header(mapOf("x-sessionid" to sessionId)).responseObject(gsonDeserializer())
             } else {
                 request.header(mapOf("x-sessionid" to sessionId)).response() as Triple<Request, Response, Result<T, FuelError>>
 
@@ -674,144 +626,73 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         return triple as Triple<Request, Response, Result<T, FuelError>>
     }
 
-    fun getChannels(handler: (Request, Response, Result<List<Channel>, FuelError>) -> Unit) {
-        processSessionId(request = buildChannelListRequest(), handler = handler)
+    private inline fun <reified T : Any> processCloudRequestSync(request: Request, json: Boolean = true): Triple<Request, Response, Result<T, FuelError>> {
+        if (tokenValidity < Date().time) {
+            getTokenCloudAndExecuteSync()
+        }
+        return if (json) {
+            request.header(mapOf("x-token" to token)).responseObject(gsonDeserializer())
+        } else {
+            request.header(mapOf("x-token" to token)).response() as Triple<Request, Response, Result<T, FuelError>>
+        }
     }
 
-    fun getChannels(handler: Handler<List<Channel>>) {
-        processSessionId(request = buildChannelListRequest(), handler = handler)
+    fun getVodSync(page: Int = 1,
+                   limit: Int = 500,
+                   parentalGuidance: ParentalGuidance = ParentalGuidance.MINUS_16,
+                   mode: VodMode = VodMode.SIMPLE): Triple<Request, Response, Result<List<Vod>, FuelError>> {
+        return processCloudRequestSync(request = buildVodRequest(page, limit, parentalGuidance, mode))
+    }
+
+    fun getEpgSync(page: Int = 1,
+                   limit: Int = 500,
+                   period: Int = 0,
+                   mode: EpgMode = EpgMode.SIMPLE): Triple<Request, Response, Result<List<EpgProgram>, FuelError>> {
+        return processCloudRequestSync(request = buildEpgRequest(page, limit, period, mode))
     }
 
     fun getChannelsSync(): Triple<Request, Response, Result<List<Channel>, FuelError>> {
         return processSessionIdSync(request = buildChannelListRequest())
     }
 
-    fun getApps(handler: (Request, Response, Result<List<Application>, FuelError>) -> Unit) {
-        processSessionId(request = buildAppsRequest(), handler = handler)
-    }
-
-    fun getApps(handler: Handler<List<Application>>) {
-        processSessionId(request = buildAppsRequest(), handler = handler)
-    }
-
     fun getAppsSync(): Triple<Request, Response, Result<List<Application>, FuelError>> {
         return processSessionIdSync(request = buildAppsRequest())
-    }
-
-    fun getAppInfo(packageName: String, handler: (Request, Response, Result<List<Application>, FuelError>) -> Unit) {
-        processSessionId(request = buildAppInfoRequest(packageName), handler = handler)
-    }
-
-    fun getAppInfo(packageName: String, handler: Handler<List<Application>>) {
-        processSessionId(request = buildAppInfoRequest(packageName), handler = handler)
     }
 
     fun getAppInfoSync(packageName: String): Triple<Request, Response, Result<List<Application>, FuelError>> {
         return processSessionIdSync(request = buildAppInfoRequest(packageName))
     }
 
-    fun getAppIcon(packageName: String, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
-        processSessionId(request = buildAppIconRequest(packageName), handler = handler, json = false)
-    }
-
-    fun getAppIcon(packageName: String, handler: Handler<ByteArray>) {
-        processSessionId(request = buildAppIconRequest(packageName), handler = handler, json = false)
-    }
-
     fun getAppIconSync(packageName: String): Triple<Request, Response, Result<ByteArray, FuelError>> {
         return processSessionIdSync(request = buildAppIconRequest(packageName), json = false)
-    }
-
-    fun getCurrentChannel(handler: (Request, Response, Result<Media, FuelError>) -> Unit) {
-        processSessionId(request = buildCurrentChannelRequest(), handler = handler)
-    }
-
-    fun getCurrentChannel(handler: Handler<Media>) {
-        processSessionId(request = buildCurrentChannelRequest(), handler = handler)
     }
 
     fun getCurrentChannelSync(): Triple<Request, Response, Result<Media, FuelError>> {
         return processSessionIdSync(request = buildCurrentChannelRequest())
     }
 
-    fun getVolume(handler: (Request, Response, Result<Volume, FuelError>) -> Unit) {
-        processSessionId(request = buildVolumeRequest(), handler = handler)
-    }
-
-    fun getVolume(handler: Handler<Volume>) {
-        processSessionId(request = buildVolumeRequest(), handler = handler)
-    }
-
     fun getVolumeSync(): Triple<Request, Response, Result<Volume, FuelError>> {
         return processSessionIdSync(request = buildVolumeRequest())
-    }
-
-    fun startApp(packageName: String, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
-        processSessionId(request = buildStartAppRequest(packageName), handler = handler, json = false)
-    }
-
-    fun startApp(packageName: String, handler: Handler<ByteArray>) {
-        processSessionId(request = buildStartAppRequest(packageName), handler = handler, json = false)
     }
 
     fun startAppSync(packageName: String): Triple<Request, Response, Result<ByteArray, FuelError>> {
         return processSessionIdSync(request = buildStartAppRequest(packageName), json = false)
     }
 
-    fun displayToast(toast: ToastRequest, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
-        processSessionId(request = buildDisplayToastRequest(toast), handler = handler, json = false)
-    }
-
-    fun displayToast(toast: ToastRequest, handler: Handler<ByteArray>) {
-        processSessionId(request = buildDisplayToastRequest(toast), handler = handler, json = false)
-    }
-
     fun displayToastSync(toast: ToastRequest): Triple<Request, Response, Result<ByteArray, FuelError>> {
         return processSessionIdSync(request = buildDisplayToastRequest(toast), json = false)
-    }
-
-    fun setVolume(volume: Int, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
-        processSessionId(request = buildSetVolumeRequest(volume), handler = handler, json = false)
-    }
-
-    fun setVolume(volume: Int, handler: Handler<ByteArray>) {
-        processSessionId(request = buildSetVolumeRequest(volume), handler = handler, json = false)
     }
 
     fun setVolumeSync(volume: Int): Triple<Request, Response, Result<ByteArray, FuelError>> {
         return processSessionIdSync(request = buildSetVolumeRequest(volume), json = false)
     }
 
-    fun registerApp(appName: String, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
-        processSessionId(request = buildRegisterAppRequest(appName), handler = handler, json = false)
-    }
-
-    fun registerApp(appName: String, handler: Handler<ByteArray>) {
-        processSessionId(request = buildRegisterAppRequest(appName), handler = handler, json = false)
-    }
-
     fun registerAppSync(appName: String): Triple<Request, Response, Result<ByteArray, FuelError>> {
         return processSessionIdSync(request = buildRegisterAppRequest(appName), json = false)
     }
 
-    fun unsubscribe(channelId: String, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
-        return processSessionId(request = buildUnsubscribeNotifRequest(channelId), handler = handler, json = false)
-    }
-
-    fun unsubscribe(channelId: String, handler: Handler<ByteArray>) {
-        return processSessionId(request = buildUnsubscribeNotifRequest(channelId), handler = handler, json = false)
-    }
-
     fun unsubscribeSync(channelId: String): Triple<Request, Response, Result<ByteArray, FuelError>> {
         return processSessionIdSync(request = buildUnsubscribeNotifRequest(channelId), json = false)
-    }
-
-    fun getOpenedChannels(handler: (Request, Response, Result<List<String>, FuelError>) -> Unit) {
-        return processSessionId(request = buildGetOpenedChannelRequest(), handler = handler)
-    }
-
-    fun getOpenedChannels(handler: Handler<List<String>>) {
-        return processSessionId(request = buildGetOpenedChannelRequest(), handler = handler)
     }
 
     fun getOpenedChannelsSync(): Triple<Request, Response, Result<List<String>, FuelError>> {
@@ -834,24 +715,8 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         return getOpenedChannelsSync()
     }
 
-    fun sendNotification(channelId: String, appId: String, message: String, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
-        return processSessionId(request = buildPostNotification(channelId, appId, message), handler = handler, json = false)
-    }
-
-    fun sendNotification(channelId: String, appId: String, message: String, handler: Handler<ByteArray>) {
-        return processSessionId(request = buildPostNotification(channelId, appId, message), handler = handler, json = false)
-    }
-
     fun sendNotificationSync(channelId: String, appId: String, message: String): Triple<Request, Response, Result<ByteArray, FuelError>> {
         return processSessionIdSync(request = buildPostNotification(channelId, appId, message), json = false)
-    }
-
-    fun createCustomRequest(request: Request, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) {
-        return processSessionId(request = request, handler = handler, json = false)
-    }
-
-    fun createCustomRequest(request: Request, handler: Handler<ByteArray>) {
-        return processSessionId(request = request, handler = handler, json = false)
     }
 
     fun createCustomRequestSync(request: Request): Triple<Request, Response, Result<ByteArray, FuelError>> {
