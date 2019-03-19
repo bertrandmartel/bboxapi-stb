@@ -31,6 +31,8 @@
 - [x] start application (`POST /applications/$packageName`)
 - [x] display toast (`POST /userinterface/toast`)
 - [x] set volume (`POST /userinterface/volume`)
+- [x] get VOD catalog (`GET /media/vod`) (**cloud**)
+- [x] get EPG catalog (`GET /media/live`) (**cloud**)
 
 #### Notifications
 
