@@ -3,7 +3,7 @@ language: android
 android:
   components:
     - tools
-    - build-tools-28.0.2
+    - build-tools-28.0.3
     - android-28
     - extra-android-support
     - extra-google-m2repository
@@ -16,6 +16,7 @@ jdk:
 
 before_install:
   - yes | sdkmanager "platforms;android-28"
+  - yes | sdkmanager "build-tools;28.0.3"
 
 cache:
   directories:
