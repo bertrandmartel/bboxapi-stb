@@ -16,19 +16,6 @@ public class CustomRequest {
             switch (stbServiceEvent) {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
-
-                    bboxapi.createCustomRequest(bboxapi.getManager().request(Method.GET, "/applications", null), new Handler<byte[]>() {
-                        @Override
-                        public void success(Request request, Response response, byte[] data) {
-                            System.out.println(new String(data));
-                        }
-
-                        @Override
-                        public void failure(Request request, Response response, FuelError fuelError) {
-                            fuelError.printStackTrace();
-                        }
-                    });
-
                     Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.createCustomRequestSync(bboxapi.getManager().request(Method.GET, "/applications", null));
                     Request request = data.getFirst();
                     Response response = data.getSecond();

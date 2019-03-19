@@ -22,19 +22,6 @@ public class GetChannels {
             switch (stbServiceEvent) {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
-
-                    bboxapi.getChannels(new Handler<List<Channel>>() {
-                        @Override
-                        public void success(Request request, Response response, List<Channel> channels) {
-                            System.out.println(channels);
-                        }
-
-                        @Override
-                        public void failure(Request request, Response response, FuelError fuelError) {
-                            fuelError.printStackTrace();
-                        }
-                    });
-
                     Triple<Request, Response, Result<List<Channel>, FuelError>> data = bboxapi.getChannelsSync();
                     Request request = data.getFirst();
                     Response response = data.getSecond();

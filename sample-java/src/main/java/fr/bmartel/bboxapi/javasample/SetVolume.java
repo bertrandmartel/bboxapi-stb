@@ -21,18 +21,6 @@ public class SetVolume {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
 
-                    bboxapi.setVolume(10, new Handler<byte[]>() {
-                        @Override
-                        public void success(Request request, Response response, byte[] body) {
-                            System.out.println(response.getStatusCode());
-                        }
-
-                        @Override
-                        public void failure(Request request, Response response, FuelError fuelError) {
-                            fuelError.printStackTrace();
-                        }
-                    });
-
                     Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.setVolumeSync(100);
                     Request request = data.getFirst();
                     Response response = data.getSecond();

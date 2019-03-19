@@ -22,19 +22,6 @@ public class GetAppIcon {
             switch (stbServiceEvent) {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
-
-                    bboxapi.getAppIcon("com.google.android.youtube.tv", new Handler<byte[]>() {
-                        @Override
-                        public void success(Request request, Response response, byte[] image) {
-                            System.out.println(image.length);
-                        }
-
-                        @Override
-                        public void failure(Request request, Response response, FuelError fuelError) {
-                            fuelError.printStackTrace();
-                        }
-                    });
-
                     Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.getAppIconSync("com.google.android.youtube.tv");
                     Request request = data.getFirst();
                     Response response = data.getSecond();

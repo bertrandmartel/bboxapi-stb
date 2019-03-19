@@ -11,19 +11,6 @@ fun main(args: Array<String>) {
     bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, service, changed, error ->
         when (eventType) {
             StbServiceEvent.SERVICE_FOUND -> {
-                bboxapi.getAppInfo(packageName = "com.google.android.youtube.tv") { _, _, result ->
-                    when (result) {
-                        is Result.Failure -> {
-                            val ex = result.getException()
-                            ex.printStackTrace()
-                        }
-                        is Result.Success -> {
-                            val data = result.get()
-                            println(data)
-                        }
-                    }
-                }
-
                 val (_, _, result) = bboxapi.getAppInfoSync(packageName = "com.google.android.youtube.tv")
                 when (result) {
                     is Result.Failure -> {

@@ -19,23 +19,6 @@ public class GetApps {
             switch (stbServiceEvent) {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
-
-                    bboxapi.getApps(new Handler<List<Application>>() {
-                        @Override
-                        public void failure(Request request, Response response, FuelError error) {
-                            if (error.getException() instanceof HttpException) {
-                                System.out.println("http error : " + response.getStatusCode());
-                            } else {
-                                error.printStackTrace();
-                            }
-                        }
-
-                        @Override
-                        public void success(Request request, Response response, List<Application> data) {
-                            System.out.println(data);
-                        }
-                    });
-
                     Triple<Request, Response, Result<List<Application>, FuelError>> data = bboxapi.getAppsSync();
                     Request request = data.getFirst();
                     Response response = data.getSecond();

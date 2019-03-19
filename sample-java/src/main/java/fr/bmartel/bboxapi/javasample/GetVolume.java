@@ -20,19 +20,6 @@ public class GetVolume {
             switch (stbServiceEvent) {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
-
-                    bboxapi.getVolume(new Handler<Volume>() {
-                        @Override
-                        public void success(Request request, Response response, Volume volume) {
-                            System.out.println(volume);
-                        }
-
-                        @Override
-                        public void failure(Request request, Response response, FuelError fuelError) {
-                            fuelError.printStackTrace();
-                        }
-                    });
-
                     Triple<Request, Response, Result<Volume, FuelError>> data = bboxapi.getVolumeSync();
                     Request request = data.getFirst();
                     Response response = data.getSecond();

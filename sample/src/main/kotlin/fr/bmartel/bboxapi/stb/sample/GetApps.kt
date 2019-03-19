@@ -9,25 +9,9 @@ import fr.bmartel.bboxapi.stb.model.StbServiceEvent
 fun main(args: Array<String>) {
     val bboxapi = BboxApiStb(appId = "YourAppId", appSecret = "YourAppSecret")
 
-    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, service, changed, error ->
+    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, _, _, error ->
         when (eventType) {
             StbServiceEvent.SERVICE_FOUND -> {
-                bboxapi.getApps { _, response, result ->
-                    when (result) {
-                        is Result.Failure -> {
-                            val ex = result.getException()
-                            when {
-                                ex.exception is HttpException -> println("http error : ${response.statusCode}")
-                                else -> ex.printStackTrace()
-                            }
-                        }
-                        is Result.Success -> {
-                            val data = result.get()
-                            println(data)
-                        }
-                    }
-                }
-
                 val (_, _, result) = bboxapi.getAppsSync()
                 when (result) {
                     is Result.Failure -> {

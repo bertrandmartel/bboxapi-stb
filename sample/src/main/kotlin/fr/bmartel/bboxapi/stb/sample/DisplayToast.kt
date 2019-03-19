@@ -14,17 +14,6 @@ fun main(args: Array<String>) {
             StbServiceEvent.SERVICE_FOUND -> {
                 println("service found : ${service?.ip}:${service?.port}")
                 val toast = ToastRequest(message = "this is a message", pos_y = 500, pos_x = 200, color = "#FF0000")
-                bboxapi.displayToast(toast) { _, response, result ->
-                    when (result) {
-                        is Result.Failure -> {
-                            result.getException().printStackTrace()
-                        }
-                        is Result.Success -> {
-                            println(response.statusCode)
-                        }
-                    }
-                }
-
                 val (_, res, result) = bboxapi.displayToastSync(toast)
                 when (result) {
                     is Result.Failure -> {

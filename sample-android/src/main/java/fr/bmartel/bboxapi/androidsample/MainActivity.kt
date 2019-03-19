@@ -84,15 +84,15 @@ class MainActivity : Activity() {
                 })
             }
         })
-        discoveryWsBtn.setOnClickListener({
+        discoveryWsBtn.setOnClickListener {
             val res = bboxapi.startWebsocketDiscovery(findOneAndExit = false, maxDuration = 10000, platform = AndroidPlatform.create(this)) { eventType, service, _, error ->
                 when (eventType) {
                     StbServiceEvent.SERVICE_FOUND -> {
                         println("ws service found : ${service?.ip}:${service?.port}")
-                        mHandler.post({
+                        mHandler.post {
                             wsServiceAdapter?.list = getStbServiceList(ws = true)
                             wsServiceAdapter?.notifyDataSetChanged()
-                        })
+                        }
                     }
                     StbServiceEvent.DISCOVERY_STOPPED -> println("end of discovery")
                     StbServiceEvent.DISCOVERY_ERROR -> error?.printStackTrace()
@@ -103,10 +103,10 @@ class MainActivity : Activity() {
                     Toast.makeText(this, "ws discovery already started", Toast.LENGTH_SHORT).show()
                 })
             }
-        })
-        subscribeBtn.setOnClickListener({
+        }
+        subscribeBtn.setOnClickListener {
             subscribe()
-        })
+        }
     }
 
     private fun getStbServiceList(ws: Boolean): List<StbServiceItem> {
@@ -131,7 +131,7 @@ class MainActivity : Activity() {
     }
 
     private fun subscribe() {
-        mExecutor.execute({
+        mExecutor.execute {
             try {
                 //unsubscribe all channels
                 bboxapi.unsubscribeAllSync()
@@ -171,9 +171,9 @@ class MainActivity : Activity() {
                         })
 
                 if (notificationChannel == null) {
-                    mHandler.post({
+                    mHandler.post {
                         Toast.makeText(this, "notification channel was not created", Toast.LENGTH_SHORT).show()
-                    })
+                    }
                 } else {
                     val (_, _, result) = notificationChannel.subscribeResult
                     if (result is Result.Failure) {
@@ -191,29 +191,20 @@ class MainActivity : Activity() {
                     val timer = Timer("schedule", true)
 
                     timer.schedule(2000) {
-                        bboxapi.sendNotification(channelId = notificationChannel.channelId ?: "",
+                        bboxapi.sendNotificationSync(channelId = notificationChannel.channelId ?: "",
                                 appId = notificationChannel.appId ?: "",
-                                message = "some message") { _, _, result ->
-                            when (result) {
-                                is Result.Failure -> {
-                                    result.getException().printStackTrace()
-                                }
-                                is Result.Success -> {
-                                    println("message sent")
-                                }
-                            }
-                        }
+                                message = "some message")
                     }
                 }
             } catch (e: HttpException) {
-                mHandler.post({
+                mHandler.post {
                     Toast.makeText(this, "http exception : ${e.message}", Toast.LENGTH_SHORT).show()
-                })
+                }
             } catch (e: ConnectException){
-                mHandler.post({
+                mHandler.post {
                     Toast.makeText(this, "can't connect to server", Toast.LENGTH_SHORT).show()
-                })
+                }
             }
-        })
+        }
     }
 }

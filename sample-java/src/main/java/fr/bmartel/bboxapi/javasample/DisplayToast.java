@@ -21,19 +21,6 @@ public class DisplayToast {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
                     ToastRequest toastRequest = new ToastRequest("this is a toast", "#FF0000", 500, 300);
-
-                    bboxapi.displayToast(toastRequest, new Handler<byte[]>() {
-                        @Override
-                        public void success(Request request, Response response, byte[] bytes) {
-                            System.out.println(response.getStatusCode());
-                        }
-
-                        @Override
-                        public void failure(Request request, Response response, FuelError fuelError) {
-                            fuelError.printStackTrace();
-                        }
-                    });
-
                     Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.displayToastSync(toastRequest);
                     Request request = data.getFirst();
                     Response response = data.getSecond();

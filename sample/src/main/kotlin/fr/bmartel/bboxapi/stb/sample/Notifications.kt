@@ -13,7 +13,7 @@ fun main(args: Array<String>) {
     val resourceList = listOf(Resource.Application, Resource.Media, Resource.Message)
 
     //look for BboxAPI service & subscribe events
-    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, service, changed, error ->
+    bboxapi.startRestDiscovery(findOneAndExit = true, maxDuration = 10000, platform = DesktopPlatform.create()) { eventType, _, _, error ->
         when (eventType) {
             StbServiceEvent.SERVICE_FOUND -> {
                 println("service found... opening websocket")
@@ -87,16 +87,16 @@ fun main(args: Array<String>) {
                             }
                         }
 
-                        bboxapi.sendNotification(channelId = notificationChannel.channelId ?: "",
+                        val (_, _, result2) = bboxapi.sendNotificationSync(
+                                channelId = notificationChannel.channelId ?: "",
                                 appId = notificationChannel.appId ?: "",
-                                message = "some message") { _, response, result ->
-                            when (result) {
-                                is Result.Failure -> {
-                                    result.getException().printStackTrace()
-                                }
-                                is Result.Success -> {
-                                    println("message sent")
-                                }
+                                message = "some message")
+                        when (result2) {
+                            is Result.Failure -> {
+                                result2.getException().printStackTrace()
+                            }
+                            is Result.Success -> {
+                                println("message sent")
                             }
                         }
                     }

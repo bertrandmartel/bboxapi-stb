@@ -1,17 +1,9 @@
 package fr.bmartel.bboxapi.javasample;
 
 import com.github.kittinunf.fuel.core.FuelError;
-import com.github.kittinunf.fuel.core.Handler;
 import com.github.kittinunf.fuel.core.Request;
 import com.github.kittinunf.fuel.core.Response;
 import com.github.kittinunf.result.Result;
-
-import de.mannodermaus.rxbonjour.platforms.desktop.DesktopPlatform;
-import fr.bmartel.bboxapi.stb.BboxApiStb;
-import fr.bmartel.bboxapi.stb.IWebsocketListener;
-import fr.bmartel.bboxapi.stb.model.*;
-import kotlin.Triple;
-import kotlin.Unit;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,6 +12,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+
+import de.mannodermaus.rxbonjour.platforms.desktop.DesktopPlatform;
+import fr.bmartel.bboxapi.stb.BboxApiStb;
+import fr.bmartel.bboxapi.stb.IWebsocketListener;
+import fr.bmartel.bboxapi.stb.model.AppEvent;
+import fr.bmartel.bboxapi.stb.model.BboxApiError;
+import fr.bmartel.bboxapi.stb.model.MediaEvent;
+import fr.bmartel.bboxapi.stb.model.MessageEvent;
+import fr.bmartel.bboxapi.stb.model.NotificationChannel;
+import fr.bmartel.bboxapi.stb.model.Resource;
+import kotlin.Triple;
+import kotlin.Unit;
 
 public class Notifications {
 
@@ -105,21 +109,16 @@ public class Notifications {
                                 System.out.println("message sent");
                             }
 
-                            bboxapi.sendNotification(
+                            Triple<Request, Response, Result<byte[], FuelError>> result2 = bboxapi.sendNotificationSync(
                                     notificationChannel.getChannelId(),
                                     notificationChannel.getAppId(),
-                                    "some message", new Handler<byte[]>() {
-                                        @Override
-                                        public void success(Request request, Response response, byte[] bytes) {
-                                            System.out.println("message sent");
-                                        }
-
-                                        @Override
-                                        public void failure(Request request, Response response, FuelError fuelError) {
-                                            fuelError.printStackTrace();
-                                        }
-                                    }
+                                    "some message"
                             );
+                            if (result2.component3().component2() != null) {
+                                result2.component3().component2().printStackTrace();
+                            } else {
+                                System.out.println("message sent");
+                            }
                         }
                     }, 2000);
 

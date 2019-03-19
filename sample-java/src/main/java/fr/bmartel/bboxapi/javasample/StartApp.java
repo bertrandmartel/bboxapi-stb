@@ -19,19 +19,6 @@ public class StartApp {
             switch (stbServiceEvent) {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
-
-                    bboxapi.startApp("com.google.android.youtube.tv", new Handler<byte[]>() {
-                        @Override
-                        public void success(Request request, Response response, byte[] body) {
-                            System.out.println(response.getStatusCode());
-                        }
-
-                        @Override
-                        public void failure(Request request, Response response, FuelError fuelError) {
-                            fuelError.printStackTrace();
-                        }
-                    });
-
                     Triple<Request, Response, Result<byte[], FuelError>> data = bboxapi.startAppSync("com.google.android.youtube.tv");
                     Request request = data.getFirst();
                     Response response = data.getSecond();

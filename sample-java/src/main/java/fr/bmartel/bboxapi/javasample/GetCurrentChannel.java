@@ -20,19 +20,6 @@ public class GetCurrentChannel {
             switch (stbServiceEvent) {
                 case SERVICE_FOUND:
                     System.out.println("service found : " + stbService.getIp() + ":" + stbService.getPort());
-
-                    bboxapi.getCurrentChannel(new Handler<Media>() {
-                        @Override
-                        public void success(Request request, Response response, Media channel) {
-                            System.out.println(channel);
-                        }
-
-                        @Override
-                        public void failure(Request request, Response response, FuelError fuelError) {
-                            fuelError.printStackTrace();
-                        }
-                    });
-
                     Triple<Request, Response, Result<Media, FuelError>> data = bboxapi.getCurrentChannelSync();
                     Request request = data.getFirst();
                     Response response = data.getSecond();
