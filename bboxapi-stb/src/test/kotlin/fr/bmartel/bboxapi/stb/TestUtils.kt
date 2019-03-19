@@ -1,12 +1,14 @@
 package fr.bmartel.bboxapi.stb
 
-import com.github.kittinunf.fuel.core.*
+import com.github.kittinunf.fuel.core.FuelError
+import com.github.kittinunf.fuel.core.HttpException
+import com.github.kittinunf.fuel.core.Request
+import com.github.kittinunf.fuel.core.Response
 import com.github.kittinunf.result.Result
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
 import com.google.gson.reflect.TypeToken
-import fr.bmartel.bboxapi.android.stb.TestCase
 import org.hamcrest.CoreMatchers
 import org.hamcrest.MatcherAssert
 import org.junit.Assert
@@ -27,142 +29,6 @@ class TestUtils {
             return File(classLoader.getResource(fileName).file).readBytes()
         }
 
-        fun <T, Y> executeAsyncOneParam(input: Y,
-                                        testcase: TestCase,
-                                        filename: String?,
-                                        body: (input: Y, handler: (Request, Response, Result<*, FuelError>) -> Unit) -> T,
-                                        expectedException: Exception? = null,
-                                        json: Boolean = true) {
-            var request: Request? = null
-            var response: Response? = null
-            var data: Any? = null
-            var err: FuelError? = null
-            body(input) { req, res, result ->
-                request = req
-                response = res
-                val (d, e) = result
-                data = d
-                err = e
-                testcase.lock.countDown()
-            }
-            testcase.await()
-            checkAsyncResult(
-                    filename = filename,
-                    request = request,
-                    response = response,
-                    data = data,
-                    err = err,
-                    expectedException = expectedException,
-                    json = json)
-        }
-
-        fun <T, A, B, C> executeAsyncThreeParam(input1: A,
-                                                input2: B,
-                                                input3: C,
-                                                testcase: TestCase,
-                                                filename: String?,
-                                                body: (input1: A, input2: B, input3: C, handler: (Request, Response, Result<*, FuelError>) -> Unit) -> T,
-                                                expectedException: Exception? = null,
-                                                json: Boolean = true) {
-            var request: Request? = null
-            var response: Response? = null
-            var data: Any? = null
-            var err: FuelError? = null
-            body(input1, input2, input3) { req, res, result ->
-                request = req
-                response = res
-                val (d, e) = result
-                data = d
-                err = e
-                testcase.lock.countDown()
-            }
-            testcase.await()
-            checkAsyncResult(
-                    filename = filename,
-                    request = request,
-                    response = response,
-                    data = data,
-                    err = err,
-                    expectedException = expectedException,
-                    json = json)
-        }
-
-        fun <T, Y> executeAsyncOneParamCb(input: Y,
-                                          testcase: TestCase,
-                                          filename: String?,
-                                          body: (input: Y, handler: Handler<T>) -> T,
-                                          expectedException: Exception? = null,
-                                          json: Boolean = true) {
-            var request: Request? = null
-            var response: Response? = null
-            var data: Any? = null
-            var err: FuelError? = null
-
-            body(input, object : Handler<T> {
-                override fun failure(req: Request, res: Response, e: FuelError) {
-                    request = req
-                    response = res
-                    err = e
-                    testcase.lock.countDown()
-                }
-
-                override fun success(req: Request, res: Response, d: T) {
-                    request = req
-                    response = res
-                    data = d
-                    testcase.lock.countDown()
-                }
-            })
-            testcase.await()
-            checkAsyncResult(
-                    filename = filename,
-                    request = request,
-                    response = response,
-                    data = data,
-                    err = err,
-                    expectedException = expectedException,
-                    json = json)
-        }
-
-        fun <T, A, B, C> executeAsyncThreeParamCb(input1: A,
-                                                  input2: B,
-                                                  input3: C,
-                                                  testcase: TestCase,
-                                                  filename: String?,
-                                                  body: (input1: A, input2: B, input3: C, handler: Handler<T>) -> T,
-                                                  expectedException: Exception? = null,
-                                                  json: Boolean = true) {
-            var request: Request? = null
-            var response: Response? = null
-            var data: Any? = null
-            var err: FuelError? = null
-
-            body(input1, input2, input3, object : Handler<T> {
-                override fun failure(req: Request, res: Response, e: FuelError) {
-                    request = req
-                    response = res
-                    err = e
-                    testcase.lock.countDown()
-                }
-
-                override fun success(req: Request, res: Response, d: T) {
-                    request = req
-                    response = res
-                    data = d
-                    testcase.lock.countDown()
-                }
-            })
-            testcase.await()
-            checkAsyncResult(
-                    filename = filename,
-                    request = request,
-                    response = response,
-                    data = data,
-                    err = err,
-                    expectedException = expectedException,
-                    json = json)
-        }
-
         fun <T, Y> executeSyncOneParam(filename: String?, input: Y, body: (input: Y) -> T, expectedException: Exception? = null, json: Boolean = true) {
             val (_, response, result) = body(input) as Triple<Request, Response, *>
             val (data, err) = result as Result<*, FuelError>
@@ -179,60 +45,6 @@ class TestUtils {
             val (_, response, result) = body() as Triple<Request, Response, *>
             val (data, err) = result as Result<*, FuelError>
             checkSyncResult(filename = filename, response = response, data = data, err = err, expectedException = expectedException)
-        }
-
-        fun <T> executeAsyncCb(testcase: TestCase, filename: String?, body: (handler: Handler<T>) -> T, expectedException: Exception? = null) {
-            var request: Request? = null
-            var response: Response? = null
-            var data: Any? = null
-            var err: FuelError? = null
-
-            body(object : Handler<T> {
-                override fun failure(req: Request, res: Response, e: FuelError) {
-                    request = req
-                    response = res
-                    err = e
-                    testcase.lock.countDown()
-                }
-
-                override fun success(req: Request, res: Response, d: T) {
-                    request = req
-                    response = res
-                    data = d
-                    testcase.lock.countDown()
-                }
-            })
-            testcase.await()
-            checkAsyncResult(
-                    filename = filename,
-                    request = request,
-                    response = response,
-                    data = data,
-                    err = err,
-                    expectedException = expectedException)
-        }
-
-        fun <T> executeAsync(testcase: TestCase, filename: String?, body: (handler: (Request, Response, Result<*, FuelError>) -> Unit) -> T, expectedException: Exception? = null) {
-            var request: Request? = null
-            var response: Response? = null
-            var data: Any? = null
-            var err: FuelError? = null
-            body { req, res, result ->
-                request = req
-                response = res
-                val (d, e) = result
-                data = d
-                err = e
-                testcase.lock.countDown()
-            }
-            testcase.await()
-            checkAsyncResult(
-                    filename = filename,
-                    request = request,
-                    response = response,
-                    data = data,
-                    err = err,
-                    expectedException = expectedException)
         }
 
         private fun checkAsyncResult(filename: String?,
@@ -303,66 +115,6 @@ class TestUtils {
             } else {
                 JSONAssert.assertEquals(data.getAsJsonObject("body").toString(), Gson().toJson(response), false)
             }
-        }
-
-        inline fun <reified U> checkCustomResponse(testcase: TestCase,
-                                                   inputReq: Request,
-                                                   filename: String?,
-                                                   expectedException: Exception?,
-                                                   body: (Request, handler: (Request, Response, Result<ByteArray, FuelError>) -> Unit) -> Unit) {
-            var request: Request? = null
-            var response: Response? = null
-            var data: ByteArray? = null
-            var err: FuelError? = null
-            body(inputReq) { req, res, result ->
-                request = req
-                response = res
-                val (d, e) = result
-                data = d
-                err = e
-                testcase.lock.countDown()
-            }
-            testcase.await()
-            checkFuelResponseResult<U>(filename = filename,
-                    request = request,
-                    response = response,
-                    data = data ?: ByteArray(0),
-                    err = err,
-                    expectedException = expectedException)
-        }
-
-
-        inline fun <reified U> checkCustomResponseCb(testcase: TestCase,
-                                                     inputReq: Request,
-                                                     filename: String?,
-                                                     expectedException: Exception?,
-                                                     body: (Request, handler: Handler<ByteArray>) -> Unit) {
-            var request: Request? = null
-            var response: Response? = null
-            var data: ByteArray? = null
-            var err: FuelError? = null
-            body(inputReq, object : Handler<ByteArray> {
-                override fun failure(req: Request, res: Response, e: FuelError) {
-                    request = req
-                    response = res
-                    err = e
-                    testcase.lock.countDown()
-                }
-
-                override fun success(req: Request, res: Response, d: ByteArray) {
-                    request = req
-                    response = res
-                    data = d
-                    testcase.lock.countDown()
-                }
-            })
-            testcase.await()
-            checkFuelResponseResult<U>(filename = filename,
-                    request = request,
-                    response = response,
-                    data = data ?: ByteArray(0),
-                    err = err,
-                    expectedException = expectedException)
         }
 
         inline fun <reified U> checkCustomResponseSync(

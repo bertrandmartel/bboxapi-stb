@@ -4,7 +4,6 @@ import com.github.kittinunf.fuel.core.HttpException
 import com.github.kittinunf.fuel.core.Method
 import com.github.kittinunf.result.Result
 import com.google.gson.Gson
-import com.google.gson.JsonParser
 import de.mannodermaus.rxbonjour.BonjourBroadcastConfig
 import de.mannodermaus.rxbonjour.RxBonjour
 import de.mannodermaus.rxbonjour.drivers.jmdns.JmDNSDriver
@@ -16,10 +15,8 @@ import okhttp3.mockwebserver.MockWebServer
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.server.WebSocketServer
-import org.json.JSONObject
 import org.junit.*
 import org.skyscreamer.jsonassert.JSONAssert
-import java.lang.Exception
 import java.net.InetSocketAddress
 import java.net.UnknownHostException
 import java.util.*
@@ -56,31 +53,8 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun getChannels() {
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels)
-        //following request doesn't call /sessionId or /token
-        lock = CountDownLatch(1)
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels)
-    }
-
-    @Test
-    fun getChannelsCb() {
-        TestUtils.executeAsyncCb(testcase = this, filename = "channels.json", body = bboxApi::getChannels)
-    }
-
-    @Test
     fun getChannelsSync() {
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync)
-    }
-
-    @Test
-    fun getApps() {
-        TestUtils.executeAsync(testcase = this, filename = "apps.json", body = bboxApi::getApps)
-    }
-
-    @Test
-    fun getAppsCb() {
-        TestUtils.executeAsyncCb(testcase = this, filename = "apps.json", body = bboxApi::getApps)
     }
 
     @Test
@@ -89,28 +63,8 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun getAppInfo() {
-        TestUtils.executeAsyncOneParam(input = APP_TEST, testcase = this, filename = "app_info.json", body = bboxApi::getAppInfo)
-    }
-
-    @Test
-    fun getAppInfoCb() {
-        TestUtils.executeAsyncOneParamCb(input = APP_TEST, testcase = this, filename = "app_info.json", body = bboxApi::getAppInfo)
-    }
-
-    @Test
     fun getAppInfoSync() {
         TestUtils.executeSyncOneParam(input = APP_TEST, filename = "app_info.json", body = bboxApi::getAppInfoSync)
-    }
-
-    @Test
-    fun getAppIcon() {
-        TestUtils.executeAsyncOneParam(input = APP_TEST, testcase = this, filename = "ic_launcher.png", body = bboxApi::getAppIcon, json = false)
-    }
-
-    @Test
-    fun getAppIconCb() {
-        TestUtils.executeAsyncOneParamCb(input = APP_TEST, testcase = this, filename = "ic_launcher.png", body = bboxApi::getAppIcon, json = false)
     }
 
     @Test
@@ -119,28 +73,8 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun getCurrentChannel() {
-        TestUtils.executeAsync(testcase = this, filename = "current_channel.json", body = bboxApi::getCurrentChannel)
-    }
-
-    @Test
-    fun getCurrentChannelCb() {
-        TestUtils.executeAsyncCb(testcase = this, filename = "current_channel.json", body = bboxApi::getCurrentChannel)
-    }
-
-    @Test
     fun getCurrentChannelSync() {
         TestUtils.executeSync(filename = "current_channel.json", body = bboxApi::getCurrentChannelSync)
-    }
-
-    @Test
-    fun getVolume() {
-        TestUtils.executeAsync(testcase = this, filename = "volume.json", body = bboxApi::getVolume)
-    }
-
-    @Test
-    fun getVolumeCb() {
-        TestUtils.executeAsyncCb(testcase = this, filename = "volume.json", body = bboxApi::getVolume)
     }
 
     @Test
@@ -149,39 +83,10 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun startApp() {
-        TestUtils.executeAsyncOneParam(input = APP_TEST, testcase = this, filename = null, body = bboxApi::startApp)
-    }
-
-    @Test
-    fun startAppCb() {
-        TestUtils.executeAsyncOneParamCb(input = APP_TEST, testcase = this, filename = null, body = bboxApi::startApp)
-    }
-
-    @Test
     fun startAppSync() {
         TestUtils.executeSyncOneParam(input = APP_TEST, filename = null, body = bboxApi::startAppSync)
     }
 
-    @Test
-    fun displayToast() {
-        TestUtils.executeAsyncOneParam(input = ToastRequest(
-                message = "this is a toast",
-                color = "#FF0000",
-                pos_x = 100,
-                pos_y = 500
-        ), testcase = this, filename = null, body = bboxApi::displayToast)
-    }
-
-    @Test
-    fun displayToastCb() {
-        TestUtils.executeAsyncOneParamCb(input = ToastRequest(
-                message = "this is a toast",
-                color = "#FF0000",
-                pos_x = 100,
-                pos_y = 500
-        ), testcase = this, filename = null, body = bboxApi::displayToast)
-    }
 
     @Test
     fun displayToastSync() {
@@ -194,28 +99,8 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun setVolume() {
-        TestUtils.executeAsyncOneParam(input = 100, testcase = this, filename = null, body = bboxApi::setVolume)
-    }
-
-    @Test
-    fun setVolumeCb() {
-        TestUtils.executeAsyncOneParamCb(input = 100, testcase = this, filename = null, body = bboxApi::setVolume)
-    }
-
-    @Test
     fun setVolumeSync() {
         TestUtils.executeSyncOneParam(input = 100, filename = null, body = bboxApi::setVolumeSync)
-    }
-
-    @Test
-    fun registerApp() {
-        TestUtils.executeAsyncOneParam(input = "myApp", testcase = this, filename = null, body = bboxApi::registerApp)
-    }
-
-    @Test
-    fun registerAppCb() {
-        TestUtils.executeAsyncOneParamCb(input = "myApp", testcase = this, filename = null, body = bboxApi::registerApp)
     }
 
     @Test
@@ -224,55 +109,14 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun unsubscribe() {
-        TestUtils.executeAsyncOneParam(input = CHANNELS[0], testcase = this, filename = null, body = bboxApi::unsubscribe)
-    }
-
-    @Test
-    fun unsubscribeCb() {
-        TestUtils.executeAsyncOneParamCb(input = CHANNELS[0], testcase = this, filename = null, body = bboxApi::unsubscribe)
-    }
-
-    @Test
     fun unsubscribeSync() {
         TestUtils.executeSyncOneParam(input = CHANNELS[0], filename = null, body = bboxApi::unsubscribeSync)
     }
 
-    @Test
-    fun getOpenedChannels() {
-        TestUtils.executeAsync(testcase = this, filename = "opened_channels.json", body = bboxApi::getOpenedChannels)
-    }
-
-    @Test
-    fun getOpenedChannelsCb() {
-        TestUtils.executeAsyncCb(testcase = this, filename = "opened_channels.json", body = bboxApi::getOpenedChannels)
-    }
 
     @Test
     fun getOpenedChannelsSync() {
         TestUtils.executeSync(filename = "opened_channels.json", body = bboxApi::getOpenedChannelsSync)
-    }
-
-    @Test
-    fun createCustomRequest() {
-        TestUtils.checkCustomResponse<List<Application>>(
-                testcase = this,
-                inputReq = bboxApi.manager.request(method = Method.GET, path = "/applications"),
-                expectedException = null,
-                filename = "apps.json",
-                body = bboxApi::createCustomRequest
-        )
-    }
-
-    @Test
-    fun createCustomRequestCb() {
-        TestUtils.checkCustomResponseCb<List<Application>>(
-                testcase = this,
-                inputReq = bboxApi.manager.request(method = Method.GET, path = "/applications"),
-                expectedException = null,
-                filename = "apps.json",
-                body = bboxApi::createCustomRequest
-        )
     }
 
     @Test
@@ -283,28 +127,6 @@ open class BboxApiStbTest : TestCase() {
                 filename = "apps.json",
                 body = bboxApi::createCustomRequestSync
         )
-    }
-
-    @Test
-    fun sendNotification() {
-        TestUtils.executeAsyncThreeParam(
-                input1 = NOTIFICATION_CHANNEL_ID,
-                input2 = NOTIFICATION_APP_ID,
-                input3 = "some message",
-                testcase = this,
-                filename = null,
-                body = bboxApi::sendNotification)
-    }
-
-    @Test
-    fun sendNotificationCb() {
-        TestUtils.executeAsyncThreeParamCb(
-                input1 = NOTIFICATION_CHANNEL_ID,
-                input2 = NOTIFICATION_APP_ID,
-                input3 = "some message",
-                testcase = this,
-                filename = null,
-                body = bboxApi::sendNotification)
     }
 
     @Test
@@ -323,21 +145,9 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun noHostGetToken() {
-        bboxApi.cloudHost = "http://testsetsetset"
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels, expectedException = UnknownHostException())
-    }
-
-    @Test
     fun noHostSyncGetToken() {
         bboxApi.cloudHost = "http://testsetsetset"
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync, expectedException = UnknownHostException())
-    }
-
-    @Test
-    fun notFoundGetToken() {
-        bboxApi.cloudHost = mockServer.url("").toString().dropLast(n = 1) + "/test"
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels, expectedException = HttpException(httpCode = 404, httpMessage = "Client Error"))
     }
 
     @Test
@@ -347,35 +157,15 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun noHostGetSessionId() {
-        bboxApi.setBasePath("http://testsetsetset/api.bbox.lan/v0")
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels, expectedException = UnknownHostException())
-    }
-
-    @Test
     fun noHostGetSessionIdSync() {
         bboxApi.setBasePath("http://testsetsetset/api.bbox.lan/v0")
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync, expectedException = UnknownHostException())
     }
 
     @Test
-    fun notFoundGetSessionId() {
-        bboxApi.setBasePath("${mockServer.url("").toString().dropLast(n = 1)}/test/api.bbox.lan/v0")
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels, expectedException = HttpException(httpCode = 404, httpMessage = "Client Error"))
-    }
-
-    @Test
     fun notFoundGetSessionIdSync() {
         bboxApi.setBasePath("${mockServer.url("").toString().dropLast(n = 1)}/test/api.bbox.lan/v0")
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync, expectedException = HttpException(httpCode = 404, httpMessage = "Client Error"))
-    }
-
-    @Test
-    fun getChannelWithTokenValidityOk() {
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.HOUR_OF_DAY, 1)
-        bboxApi.tokenValidity = cal.time.time
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels)
     }
 
     @Test
@@ -387,28 +177,11 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun getChannelWithSessionIdValidityOk() {
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.HOUR_OF_DAY, 1)
-        bboxApi.sessionIdValidity = cal.time.time
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels)
-    }
-
-    @Test
     fun getChannelWithSessionIdValidityOkSync() {
         val cal = Calendar.getInstance()
         cal.add(Calendar.HOUR_OF_DAY, 1)
         bboxApi.sessionIdValidity = cal.time.time
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync)
-    }
-
-    @Test
-    fun getChannelWithSessionIdAndTokenValidityOk() {
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.HOUR_OF_DAY, 1)
-        bboxApi.sessionIdValidity = cal.time.time
-        bboxApi.tokenValidity = cal.time.time
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels)
     }
 
     @Test
@@ -421,30 +194,12 @@ open class BboxApiStbTest : TestCase() {
     }
 
     @Test
-    fun getChannelWithTokenValidityOkButNoProblem() {
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.HOUR_OF_DAY, 1)
-        bboxApi.tokenValidity = cal.time.time
-        bboxApi.token = TOKEN
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels)
-    }
-
-    @Test
     fun getChannelWithTokenValidityOkButNoProblemSync() {
         val cal = Calendar.getInstance()
         cal.add(Calendar.HOUR_OF_DAY, 1)
         bboxApi.tokenValidity = cal.time.time
         bboxApi.token = TOKEN
         TestUtils.executeSync(filename = "channels.json", body = bboxApi::getChannelsSync)
-    }
-
-    @Test
-    fun getChannelWithSessionValidityOkButNoProblem() {
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.HOUR_OF_DAY, 1)
-        bboxApi.sessionIdValidity = cal.time.time
-        bboxApi.sessionId = SESSION_ID
-        TestUtils.executeAsync(testcase = this, filename = "channels.json", body = bboxApi::getChannels)
     }
 
     @Test
