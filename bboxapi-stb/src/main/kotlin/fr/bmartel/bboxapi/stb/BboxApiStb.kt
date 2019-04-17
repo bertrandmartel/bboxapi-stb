@@ -15,6 +15,7 @@ import fr.bmartel.bboxapi.stb.utils.NetworkUtils
 import io.reactivex.disposables.Disposable
 import okhttp3.OkHttpClient
 import okhttp3.WebSocket
+import java.net.URLEncoder
 import java.util.*
 import kotlin.concurrent.schedule
 
@@ -74,6 +75,7 @@ class BboxApiStb(val appId: String, val appSecret: String) {
 
     init {
         manager.basePath = "http://localhost"
+        createEnvironment()
     }
 
     fun setBasePath(basePath: String) {
@@ -101,15 +103,16 @@ class BboxApiStb(val appId: String, val appSecret: String) {
                 .body(GsonBuilder().disableHtmlEscaping().create().toJson(SessionIdRequest(token = token)))
     }
 
-    private fun buildVodRequest(page: Int, limit: Int, parentalGuidance: ParentalGuidance, mode: VodMode): Request {
-        return manager.request(
-                method = Method.GET,
-                path = "$cloudHost/v1.3/media/vod?page=$page&limit=$limit&parentalGuidance=${parentalGuidance.guidance}&mode=${mode.mode}"
-        )
+    fun buildVodRequest(page: Int, limit: Int, parentalGuidance: ParentalGuidance, mode: VodMode, query: String? = null): Request {
+        var path = "$cloudHost/v1.3/media/vod?page=$page&limit=$limit&parentalGuidance=${parentalGuidance.guidance}&mode=${mode.mode}"
+        if (query != null) {
+            path = "$path&title=${URLEncoder.encode(query, "UTF-8")}"
+        }
+        return manager.request(method = Method.GET, path = path)
     }
 
 
-    private fun buildEpgRequest(page: Int, limit: Int, period: Int, mode: EpgMode, startTime: String? = null, endTime: String? = null): Request {
+    fun buildEpgRequest(page: Int, limit: Int, period: Int, mode: EpgMode, startTime: String? = null, endTime: String? = null): Request {
         var request = "$cloudHost/v1.3/media/live?page=$page&limit=$limit&period=$period&mode=${mode.mode}"
         if (startTime != null) {
             request = "$request&startTime=$startTime"
@@ -551,7 +554,7 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         return triple
     }
 
-    private fun getTokenCloudAndExecuteSync() {
+    fun getTokenCloudAndExecuteSync() {
         val triple = buildTokenRequest().responseString()
         if (triple.third is Result.Success) {
             token = triple.second.headers["x-token"].elementAt(0)
@@ -626,7 +629,7 @@ class BboxApiStb(val appId: String, val appSecret: String) {
         return triple as Triple<Request, Response, Result<T, FuelError>>
     }
 
-    private inline fun <reified T : Any> processCloudRequestSync(request: Request, json: Boolean = true): Triple<Request, Response, Result<T, FuelError>> {
+    inline fun <reified T : Any> processCloudRequestSync(request: Request, json: Boolean = true): Triple<Request, Response, Result<T, FuelError>> {
         if (tokenValidity < Date().time) {
             getTokenCloudAndExecuteSync()
         }
@@ -640,8 +643,9 @@ class BboxApiStb(val appId: String, val appSecret: String) {
     fun getVodSync(page: Int = 1,
                    limit: Int = 500,
                    parentalGuidance: ParentalGuidance = ParentalGuidance.MINUS_16,
-                   mode: VodMode = VodMode.SIMPLE): Triple<Request, Response, Result<List<Vod>, FuelError>> {
-        return processCloudRequestSync(request = buildVodRequest(page, limit, parentalGuidance, mode))
+                   mode: VodMode = VodMode.SIMPLE,
+                   query: String? = null): Triple<Request, Response, Result<List<Vod>, FuelError>> {
+        return processCloudRequestSync(request = buildVodRequest(page, limit, parentalGuidance, mode, query))
     }
 
     fun getEpgSync(page: Int = 1,

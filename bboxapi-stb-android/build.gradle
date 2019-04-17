@@ -3,6 +3,7 @@ apply plugin: 'kotlin-android'
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 apply plugin: 'org.jetbrains.dokka-android'
+apply plugin: 'org.jetbrains.kotlin.android.extensions'
 
 android {
     compileSdkVersion bboxapiCompileSdkVersion
@@ -32,6 +33,9 @@ android {
 
     lintOptions {
         abortOnError false
+    }
+    androidExtensions {
+        experimental = true
     }
 }
 

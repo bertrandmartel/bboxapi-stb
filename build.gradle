@@ -3,7 +3,7 @@
 buildscript {
 
     ext {
-        kotlinVersion = '1.3.20'
+        kotlinVersion = '1.3.30'
         fuelGsonVersion = '2.0.1'
         fuelAndroidVersion = '2.0.1'
         junitVersion = '4.12'
@@ -16,7 +16,7 @@ buildscript {
         mockitoKotlinVersion = '1.5.0'
         dokkaVersion = '0.9.16'
 
-        projectVersion = '1.2.0'
+        projectVersion = '1.2.7'
         projectDescription = 'Bbox Miami API library for Kotlin/Java/Android'
         projectSite = 'https://github.com/bertrandmartel/bboxapi-stb'
         projectRepo = 'https://github.com/bertrandmartel/bboxapi-stb.git'
